@@ -3,14 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "cf workers types && oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && secretlint \"**/*\"",
+    "check": "cf workers types && oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && tsc -p test && secretlint \"**/*\" && vitest run",
     "fix": "oxfmt . && oxlint --type-aware --fix",
     "prepare": "lefthook install",
     "types": "cf workers types",
-    "build": "cf build"
+    "build": "cf build",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
+    "@cloudflare/vitest-plugin": "1.4.6",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@commitlint/types": "21.2.3",
@@ -24,7 +26,8 @@
     "secretlint": "13.0.7",
     "semantic-release": "25.0.9",
     "typescript": "7.0.2",
-    "vite": "8.3.4"
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
   },
   "engines": {
     "node": ">=24.22.0"
