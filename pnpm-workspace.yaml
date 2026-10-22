@@ -2,7 +2,9 @@ pmOnFail: error
 saveExact: true
 
 allowBuilds:
+  esbuild: false
   lefthook: false
+  workerd: false
 strictDepBuilds: true
 
 blockExoticSubdeps: true
