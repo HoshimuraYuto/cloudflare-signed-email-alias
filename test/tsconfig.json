@@ -3,5 +3,7 @@
   "compilerOptions": {
     "types": ["@cloudflare/vitest-plugin/types"]
   },
-  "include": ["**/*", "../src", "../.cloudflare/types"]
+  "include": ["**/*", "../src", "../.cloudflare/types"],
+  // The root excludes test/, and extends would carry that over.
+  "exclude": []
 }
