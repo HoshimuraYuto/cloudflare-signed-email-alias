@@ -4,10 +4,9 @@ import { join } from "node:path";
 // Must match worker.name in cloudflare.config.ts and local.worker_name in infra/main.tf.
 export const WORKER_NAME = "cloudflare-signed-email-alias";
 
-const REQUIRED = [
+const ALWAYS_REQUIRED = [
   "CLOUDFLARE_API_TOKEN",
   "CLOUDFLARE_ACCOUNT_ID",
-  "SIGNING_KEY",
   "STATE_PASSPHRASE",
   "ALIAS_DOMAIN",
   "API_HOSTNAME",
@@ -15,7 +14,7 @@ const REQUIRED = [
   "SERVICE_TOKEN_NAME",
 ] as const;
 
-type RequiredName = (typeof REQUIRED)[number];
+type RequiredName = (typeof ALWAYS_REQUIRED)[number] | "SIGNING_KEY";
 
 export interface Settings {
   get: (name: RequiredName) => string;
@@ -24,8 +23,11 @@ export interface Settings {
 }
 
 /** Throws listing every missing variable, so one run reports them all. */
-export function readSettings(env: NodeJS.ProcessEnv): Settings {
-  const missing = REQUIRED.filter((name) => (env[name] ?? "") === "");
+export function readSettings(
+  env: NodeJS.ProcessEnv,
+  alsoRequired: readonly RequiredName[] = [],
+): Settings {
+  const missing = [...ALWAYS_REQUIRED, ...alsoRequired].filter((name) => (env[name] ?? "") === "");
   if (missing.length > 0) {
     throw new Error(`Set these environment variables: ${missing.join(", ")}`);
   }
