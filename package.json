@@ -10,6 +10,7 @@
     "types": "cf workers types",
     "build": "cf build",
     "deploy": "node scripts/deploy.mts",
+    "destroy": "node scripts/destroy.mts",
     "test": "vitest run"
   },
   "dependencies": {
