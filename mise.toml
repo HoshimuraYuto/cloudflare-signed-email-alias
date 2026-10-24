@@ -2,4 +2,4 @@
 node = "24"
 
 [settings]
-idiomatic_version_file_enable_tools = ["pnpm"]
+idiomatic_version_file_enable_tools = ["pnpm", "opentofu"]

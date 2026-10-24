@@ -3,8 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "cf workers types && oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && tsc -p test && secretlint \"**/*\" && vitest run",
-    "fix": "oxfmt . && oxlint --type-aware --fix",
+    "check": "cf workers types && oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && tsc -p test && secretlint \"**/*\" && vitest run && pnpm infra:check",
+    "fix": "oxfmt . && oxlint --type-aware --fix && tofu -chdir=infra fmt",
+    "infra:check": "tofu -chdir=infra fmt -check && tofu -chdir=infra validate && tofu -chdir=infra test",
     "prepare": "lefthook install",
     "types": "cf workers types",
     "build": "cf build",
