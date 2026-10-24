@@ -43,5 +43,5 @@
   },
   // Globs skip dot folders, so the types cf generates must be listed by name.
   "include": ["**/*", ".cloudflare/types"],
-  "exclude": ["test"]
+  "exclude": ["test", "scripts"]
 }

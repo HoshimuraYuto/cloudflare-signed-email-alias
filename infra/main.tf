@@ -1,4 +1,7 @@
 terraform {
+  # The path comes from `init -backend-config`, so the state stays outside the repository.
+  backend "local" {}
+
   required_providers {
     cloudflare = {
       source  = "cloudflare/cloudflare"

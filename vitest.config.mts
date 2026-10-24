@@ -16,4 +16,5 @@ process.env["ACCESS_CLIENT_ID"] = `${crypto.randomUUID()}.access`;
 
 export default defineConfig({
   plugins: [cloudflareTest({ experimental: { newConfig: true } })],
+  test: { include: ["test/**/*.test.mts"] },
 });
