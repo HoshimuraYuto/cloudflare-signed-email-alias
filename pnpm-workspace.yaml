@@ -1,2 +1,21 @@
+pmOnFail: error
+saveExact: true
+
 allowBuilds:
   lefthook: false
+strictDepBuilds: true
+
+blockExoticSubdeps: true
+minimumReleaseAge: 4320
+minimumReleaseAgeExcludePrune: true
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 43200
+trustPolicyExcludePrune: true
+# Exceptions name an exact version: a bare name exempts every version and is never pruned.
+# minimumReleaseAgeExclude:
+#   - example-lib@1.2.3
+# trustPolicyExclude:
+#   - example-lib@1.2.3
+
+audit:
+  level: high
