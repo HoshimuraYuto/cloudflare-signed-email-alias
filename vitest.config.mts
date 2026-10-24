@@ -10,6 +10,9 @@ const signingKey = crypto.getRandomValues(new Uint8Array(32));
 process.env["SIGNING_KEY"] = btoa(String.fromCharCode(...signingKey));
 process.env["FORWARD_TO"] = "inbox@example.net";
 process.env["ALIAS_DOMAINS"] = "example.com,example.org";
+process.env["ACCESS_TEAM_DOMAIN"] = "team.example.com";
+process.env["ACCESS_AUD"] = crypto.randomUUID();
+process.env["ACCESS_CLIENT_ID"] = `${crypto.randomUUID()}.access`;
 
 export default defineConfig({
   plugins: [cloudflareTest({ experimental: { newConfig: true } })],
