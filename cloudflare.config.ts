@@ -10,6 +10,7 @@ export default defineConfig({
     env: {
       SIGNING_KEY: bindings.secret(),
       FORWARD_TO: bindings.secret(),
+      ALIAS_DOMAINS: bindings.secret(),
     },
   },
 });

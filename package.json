@@ -10,6 +10,9 @@
     "build": "cf build",
     "test": "vitest run"
   },
+  "dependencies": {
+    "tldts-icann": "7.4.19"
+  },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
     "@cloudflare/vitest-plugin": "1.4.6",
