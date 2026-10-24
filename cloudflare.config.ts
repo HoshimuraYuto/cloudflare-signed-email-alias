@@ -7,6 +7,9 @@ export default defineConfig({
     name: "cloudflare-signed-email-alias",
     compatibilityDate: "2026-10-19",
     entrypoint,
+    // Written out even where it matches the default: only the custom domain is behind Access.
+    workersDev: false,
+    previewUrls: false,
     env: {
       SIGNING_KEY: bindings.secret(),
       FORWARD_TO: bindings.secret(),

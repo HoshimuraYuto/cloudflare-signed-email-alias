@@ -24,10 +24,27 @@ terraform {
   }
 }
 
-variable "state_passphrase" {
-  description = "Encrypts the state and plan files. At least 16 characters."
-  type        = string
-  sensitive   = true
+provider "cloudflare" {}
+
+locals {
+  # Must match worker.name in cloudflare.config.ts.
+  worker_name = "cloudflare-signed-email-alias"
+  # Looked up from the list: the single-Worker data source returns the name as its id,
+  # which Access rejects.
+  worker_id = one([for worker in data.cloudflare_workers.all.result : worker.id if worker.name == local.worker_name])
 }
 
-provider "cloudflare" {}
+data "cloudflare_workers" "all" {
+  account_id = var.account_id
+}
+
+data "cloudflare_zone" "alias" {
+  filter = { name = var.alias_domain }
+}
+
+resource "cloudflare_workers_custom_domain" "api" {
+  account_id = var.account_id
+  zone_id    = data.cloudflare_zone.alias.id
+  hostname   = var.api_hostname
+  service    = local.worker_name
+}
