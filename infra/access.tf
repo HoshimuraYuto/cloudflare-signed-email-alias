@@ -2,9 +2,11 @@ data "cloudflare_zero_trust_organization" "team" {
   account_id = var.account_id
 }
 
-data "cloudflare_zero_trust_access_service_token" "client" {
+resource "cloudflare_zero_trust_access_service_token" "client" {
   account_id = var.account_id
-  filter     = { name = var.service_token_name }
+  name       = local.worker_name
+  # The device posture check still applies, so an expiry would only stop address creation without warning.
+  duration = "forever"
 }
 
 resource "cloudflare_zero_trust_device_posture_rule" "gateway" {
@@ -17,7 +19,7 @@ resource "cloudflare_zero_trust_access_policy" "api" {
   account_id = var.account_id
   name       = local.worker_name
   decision   = "non_identity"
-  include    = [{ service_token = { token_id = data.cloudflare_zero_trust_access_service_token.client.id } }]
+  include    = [{ service_token = { token_id = cloudflare_zero_trust_access_service_token.client.id } }]
   require    = [{ device_posture = { integration_uid = cloudflare_zero_trust_device_posture_rule.gateway.id } }]
 }
 

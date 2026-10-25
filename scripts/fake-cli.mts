@@ -9,12 +9,18 @@ export const APPLIED_ACCESS = {
   ACCESS_CLIENT_ID: "client.access",
 };
 
-const ACCESS_OUTPUT = JSON.stringify({ worker_secrets: { value: APPLIED_ACCESS } });
+export const SERVICE_TOKEN = { client_id: "client.access", client_secret: "client-secret" };
+
+const ACCESS_OUTPUT = JSON.stringify({
+  worker_secrets: { value: APPLIED_ACCESS },
+  service_token: { value: SERVICE_TOKEN },
+});
 
 // Each fake logs "<command line>\t<stdin>"; tofu answers `output` from a marker that `apply` creates.
 const FAKE_TOFU = `#!/bin/sh
 printf '%s\\t\\n' "tofu $*" >>"$CALLS"
 case "$*" in
+  *" init"*) echo "OpenTofu has been successfully initialized!" ;;
   *" apply"*) touch "$APPLIED" ;;
   *" output "*) if [ -f "$APPLIED" ]; then echo '${ACCESS_OUTPUT}'; else echo '{}'; fi ;;
 esac
@@ -31,6 +37,10 @@ export interface Call {
 export interface FakeCli {
   /** Runs a script from scripts/ with the fakes first on PATH; returns its exit code. */
   run: (script: string, env: Record<string, string>, input?: string) => number | null;
+  runCapturing: (
+    script: string,
+    env: Record<string, string>,
+  ) => { status: number | null; stdout: string; stderr: string };
   calls: () => Promise<Call[]>;
   forgetCalls: () => Promise<void>;
   remove: () => Promise<void>;
@@ -44,20 +54,27 @@ export async function createFakeCli(): Promise<FakeCli> {
   await chmod(join(dir, "pnpm"), 0o755);
   const log = join(dir, "calls.log");
 
+  const spawnScript = (script: string, env: Record<string, string>, input = "") =>
+    spawnSync(process.execPath, [`scripts/${script}`], {
+      cwd: new URL("..", import.meta.url),
+      input,
+      encoding: "utf8",
+      env: {
+        HOME: dir,
+        PATH: `${dir}:${process.env["PATH"] ?? ""}`,
+        CALLS: log,
+        APPLIED: join(dir, "applied"),
+        STATE_FILE: join(dir, "state", "terraform.tfstate"),
+        ...env,
+      },
+    });
+
   return {
-    run: (script, env, input = "") =>
-      spawnSync(process.execPath, [`scripts/${script}`], {
-        cwd: new URL("..", import.meta.url),
-        input,
-        env: {
-          HOME: dir,
-          PATH: `${dir}:${process.env["PATH"] ?? ""}`,
-          CALLS: log,
-          APPLIED: join(dir, "applied"),
-          STATE_FILE: join(dir, "state", "terraform.tfstate"),
-          ...env,
-        },
-      }).status,
+    run: (script, env, input) => spawnScript(script, env, input).status,
+    runCapturing: (script, env) => {
+      const { status, stdout, stderr } = spawnScript(script, env);
+      return { status, stdout, stderr };
+    },
     calls: async () => {
       const text = await readFile(log, "utf8").catch(() => "");
       return text
@@ -85,5 +102,4 @@ export const COMPLETE_ENV = {
   ALIAS_DOMAIN: "example.com",
   API_HOSTNAME: "alias-api.example.com",
   FORWARD_TO: "inbox@example.net",
-  SERVICE_TOKEN_NAME: "password-manager",
 };

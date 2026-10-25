@@ -35,12 +35,9 @@ mail is accepted only when the signature matches.
 
 ## One-time setup
 
-1. In Zero Trust, allow your devices to enroll (Device enrollment permissions), then
-   install the Cloudflare One Client (Cloudflare One Agent on mobile) on each device and
-   log in with your team name.
-2. Create an Access service token. Store its client ID and secret in your password
-   manager; you need its name for deployment.
-3. Create a signing key and store it in your password manager:
+Store each value below in your password manager; deployment reads them from there.
+
+1. **Signing key.** Create it with:
 
    ```sh
    openssl rand -base64 32
@@ -49,22 +46,29 @@ mail is accepted only when the signature matches.
    Keep this key. Every address ever created depends on it: lose it and mail to all of
    them stops; deploy again with the same key and they work again.
 
-4. Create an API token limited to your account with these permissions:
+2. **API token.** Deploy and remove use it; mail forwarding and address creation do not.
+   In the Cloudflare dashboard, open **Manage Account** → **Account API Tokens** → **Create
+   Token** → **Create Custom Token**. Each permission block has one scope, and a block shows
+   only the permissions available in that scope. Set up two blocks:
 
-   | Scope   | Permission                                                  |
-   | ------- | ----------------------------------------------------------- |
-   | Account | Workers Scripts: Edit                                       |
-   | Account | Access: Apps and Policies: Edit                             |
-   | Account | Access: Service Tokens: Read                                |
-   | Account | Access: Organizations, Identity Providers, and Groups: Read |
-   | Account | Zero Trust: Edit                                            |
-   | Account | Email Routing Addresses: Edit                               |
-   | Zone    | Zone: Read                                                  |
-   | Zone    | Zone Settings: Edit                                         |
-   | Zone    | Email Routing Rules: Edit                                   |
+   | Block scope                            | Group                       | Permission                                                  |
+   | -------------------------------------- | --------------------------- | ----------------------------------------------------------- |
+   | Entire account                         | Developer Platform          | Workers Scripts (legacy): Edit                              |
+   |                                        | Cloudflare One / Zero Trust | Access: Apps: Edit                                          |
+   |                                        | Cloudflare One / Zero Trust | Access: Service Tokens: Edit                                |
+   |                                        | Cloudflare One / Zero Trust | Access: Organizations, Identity Providers, and Groups: Read |
+   |                                        | Cloudflare One / Zero Trust | Zero Trust: Edit                                            |
+   |                                        | Email & Messaging           | Email Routing Addresses: Edit                               |
+   | The alias domain only (**Add policy**) | DNS & Zones                 | Zone: Read                                                  |
+   |                                        | DNS & Zones                 | Zone Settings: Edit                                         |
+   |                                        | Email & Messaging           | Email Routing Rules: Edit                                   |
 
-5. Choose a passphrase that encrypts the OpenTofu state (16 characters or more) and store
-   it in your password manager.
+   Limit the token further at the bottom of the same screen: set **TTL** to the days you
+   plan to deploy, and **Client IP Address Filtering** to the address you deploy from.
+   Create a new token whenever you deploy or remove again. The token is shown only once.
+
+3. **State passphrase.** Choose a passphrase of 16 characters or more. It encrypts the
+   record OpenTofu keeps of what it created, which includes the service token.
 
 ## Deploy
 
@@ -75,43 +79,62 @@ pnpm run deploy
 ```
 
 `pnpm run deploy` reads its settings from environment variables. Read the secret ones from
-your password manager's CLI into the environment; do not write them to a file.
+your password manager's CLI into the environment, for example with `op run` (1Password) or
+`bws run` (Bitwarden Secrets Manager); do not write them to a file.
 
 | Variable                | Value                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | The API token from setup step 4                                                                                           |
+| `CLOUDFLARE_API_TOKEN`  | The API token from setup step 2                                                                                           |
 | `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID                                                                                                |
-| `SIGNING_KEY`           | The signing key from setup step 3                                                                                         |
-| `STATE_PASSPHRASE`      | The passphrase from setup step 5                                                                                          |
+| `SIGNING_KEY`           | The signing key from setup step 1                                                                                         |
+| `STATE_PASSPHRASE`      | The passphrase from setup step 3                                                                                          |
 | `ALIAS_DOMAIN`          | The domain used only for aliases                                                                                          |
 | `API_HOSTNAME`          | A hostname in that domain for the API, such as `alias-api.example.com`                                                    |
 | `FORWARD_TO`            | The inbox that receives your mail                                                                                         |
-| `SERVICE_TOKEN_NAME`    | The name of the service token from setup step 2                                                                           |
-| `MANAGE_DEVICE_PROFILE` | Optional. `true` lets this project overwrite the split tunnel of your default device profile                              |
 | `STATE_FILE`            | Optional. Where the encrypted state is kept; defaults to `~/.local/state/cloudflare-signed-email-alias/terraform.tfstate` |
 
 The command deploys the Worker, shows the Cloudflare changes and waits for your approval,
 then passes the Access values to the Worker. Run it again after any change; it is safe to
 repeat.
 
-After the first deployment:
+### Account-wide settings
 
-- Cloudflare sends a verification email to `FORWARD_TO`. Mail is forwarded only after you
-  select **Verify email address** in it.
-- Unless `MANAGE_DEVICE_PROFILE` is `true`, add the hosts that the `warp_include` output
-  lists to your device profile's split tunnel (include mode). Devices that do not send
-  them through the Cloudflare One client cannot reach the API.
+Two settings exist once per Zero Trust account, so other projects may already use them.
+Deployment changes them only when you set the variable to `true`; otherwise you configure
+them yourself (see below).
+
+| Variable                   | What `true` does                                                                        |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `MANAGE_DEVICE_ENROLLMENT` | Replaces who may enroll devices with the addresses in `ENROLL_EMAILS` (comma-separated) |
+| `MANAGE_DEVICE_PROFILE`    | Replaces the split tunnel of the default device profile with this project's hosts       |
+
+### After the first deployment
+
+1. **Confirm the inbox.** Cloudflare sends a verification email to `FORWARD_TO`. Mail is
+   forwarded only after you select **Verify email address** in it.
+2. **Allow your devices to enroll**, unless `MANAGE_DEVICE_ENROLLMENT` is `true`. In the
+   dashboard, open **Zero Trust** → **Team & Resources** → **Devices** → the **Management**
+   tab → **Device enrollment permissions** → **Manage**, add a policy that includes your
+   email address with the action **Allow**, and save.
+3. **Route the API through the Cloudflare One Client**, unless `MANAGE_DEVICE_PROFILE` is
+   `true`. Add the hosts in the `warp_include` output to your device profile's split
+   tunnel (include mode). Devices that do not send them through the client cannot reach
+   the API.
+4. **Enroll each device.** Install the Cloudflare One Client (Cloudflare One Agent on
+   mobile), choose **Zero Trust security**, enter your team name, and sign in with the
+   one-time PIN sent to your email address. The team name is the `<team>` part of
+   `<team>.cloudflareaccess.com`.
 
 ## Set up the password manager
 
 In Bitwarden, open **Generator** → **Username**, set **Type** to **Forwarded email alias**
 and **Service** to **Addy.io**, and enter:
 
-| Field                | Value                                                                               |
-| -------------------- | ----------------------------------------------------------------------------------- |
-| API Key              | `{"cf-access-client-id":"<client ID>","cf-access-client-secret":"<client secret>"}` |
-| Email domain         | Your alias domain                                                                   |
-| Self-host server URL | `https://<API_HOSTNAME>`, without a trailing `/`                                    |
+| Field                | Value                                                                         |
+| -------------------- | ----------------------------------------------------------------------------- |
+| API Key              | The output of `pnpm run service-token` (same environment variables as deploy) |
+| Email domain         | Your alias domain                                                             |
+| Self-host server URL | `https://<API_HOSTNAME>`, without a trailing `/`                              |
 
 Create addresses from a login item's edit screen: the domain of the item's website then
 becomes the first part of the address. Addresses created from the generator tab start with
@@ -124,8 +147,10 @@ pnpm run destroy
 ```
 
 It uses the same environment variables except `SIGNING_KEY`, asks you to type the alias
-domain, then removes the Worker and everything deployment created. It prints the few things
-created by hand that you remove yourself.
+domain, then removes the Worker and everything deployment created for this project. The
+account-wide settings stay, because other projects may use them; set
+`RESET_SHARED_SETTINGS=true` to remove them too and restore the default split tunnel. It
+prints the few things you remove yourself.
 
 ## Development
 

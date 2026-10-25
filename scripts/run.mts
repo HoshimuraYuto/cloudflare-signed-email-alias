@@ -4,7 +4,10 @@ interface RunOptions {
   env?: Record<string, string>;
   /** Written to the child's stdin, so secrets never appear in its arguments. */
   input?: string;
-  /** Capture stdout instead of showing it; the terminal still gets stderr and prompts. */
+  /**
+   * Capture stdout instead of showing it. Uncaptured stdout is shown on stderr, which keeps the
+   * script's own stdout for its result, as in `pnpm run service-token | pbcopy`.
+   */
   capture?: boolean;
 }
 
@@ -18,7 +21,7 @@ export async function run(
     env: { ...process.env, ...options.env },
     stdio: [
       options.input === undefined ? "inherit" : "pipe",
-      options.capture ? "pipe" : "inherit",
+      options.capture ? "pipe" : process.stderr,
       "inherit",
     ],
   });

@@ -11,7 +11,6 @@ const ALWAYS_REQUIRED = [
   "ALIAS_DOMAIN",
   "API_HOSTNAME",
   "FORWARD_TO",
-  "SERVICE_TOKEN_NAME",
 ] as const;
 
 type RequiredName = (typeof ALWAYS_REQUIRED)[number] | "SIGNING_KEY";
@@ -20,6 +19,10 @@ export interface Settings {
   get: (name: RequiredName) => string;
   stateFile: string;
   manageDeviceProfile: boolean;
+  manageDeviceEnrollment: boolean;
+  enrollEmails: string[];
+  /** Whether destroy also removes the account-wide settings the two flags above manage. */
+  resetSharedSettings: boolean;
 }
 
 /** Throws listing every missing variable, so one run reports them all. */
@@ -27,7 +30,17 @@ export function readSettings(
   env: NodeJS.ProcessEnv,
   alsoRequired: readonly RequiredName[] = [],
 ): Settings {
-  const missing = [...ALWAYS_REQUIRED, ...alsoRequired].filter((name) => (env[name] ?? "") === "");
+  const manageDeviceEnrollment = env["MANAGE_DEVICE_ENROLLMENT"] === "true";
+  const enrollEmails = (env["ENROLL_EMAILS"] ?? "")
+    .split(",")
+    .map((email) => email.trim())
+    .filter((email) => email !== "");
+  const missing: string[] = [...ALWAYS_REQUIRED, ...alsoRequired].filter(
+    (name) => (env[name] ?? "") === "",
+  );
+  if (manageDeviceEnrollment && enrollEmails.length === 0) {
+    missing.push("ENROLL_EMAILS");
+  }
   if (missing.length > 0) {
     throw new Error(`Set these environment variables: ${missing.join(", ")}`);
   }
@@ -36,6 +49,9 @@ export function readSettings(
     stateFile:
       env["STATE_FILE"] ?? join(homedir(), ".local", "state", WORKER_NAME, "terraform.tfstate"),
     manageDeviceProfile: env["MANAGE_DEVICE_PROFILE"] === "true",
+    manageDeviceEnrollment,
+    enrollEmails,
+    resetSharedSettings: env["RESET_SHARED_SETTINGS"] === "true",
   };
 }
 
@@ -47,7 +63,8 @@ export function tofuEnv(settings: Settings): Record<string, string> {
     TF_VAR_alias_domain: settings.get("ALIAS_DOMAIN"),
     TF_VAR_api_hostname: settings.get("API_HOSTNAME"),
     TF_VAR_forward_to: settings.get("FORWARD_TO"),
-    TF_VAR_service_token_name: settings.get("SERVICE_TOKEN_NAME"),
     TF_VAR_manage_device_profile: String(settings.manageDeviceProfile),
+    TF_VAR_manage_device_enrollment: String(settings.manageDeviceEnrollment),
+    TF_VAR_enroll_emails: JSON.stringify(settings.enrollEmails),
   };
 }

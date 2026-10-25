@@ -34,14 +34,28 @@ describe("destroy", () => {
     expect(ran[3]).toMatch(/workers delete cloudflare-signed-email-alias --force$/);
   });
 
-  it("restores the default split tunnel only when this project managed it", async () => {
+  it("keeps the account-wide settings unless asked to reset them", async () => {
     expect(
       cli.run("destroy.mts", { ...COMPLETE_ENV, MANAGE_DEVICE_PROFILE: "true" }, "example.com\n"),
     ).toBe(0);
 
-    const restore = (await commands()).find((command) =>
-      command.includes("profiles default update"),
-    );
+    const ran = await commands();
+    const destroy = ran.find((command) => command.includes(" destroy"));
+    expect(destroy?.match(/-exclude=\S+/g)).toEqual([
+      "-exclude=cloudflare_zero_trust_device_default_profile.split_tunnel",
+      "-exclude=cloudflare_zero_trust_access_application.enroll",
+      "-exclude=cloudflare_zero_trust_access_policy.enroll",
+    ]);
+    expect(ran.some((command) => command.includes("profiles default update"))).toBe(false);
+  });
+
+  it("removes the account-wide settings and restores the split tunnel on request", async () => {
+    const env = { ...COMPLETE_ENV, MANAGE_DEVICE_PROFILE: "true", RESET_SHARED_SETTINGS: "true" };
+    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+
+    const ran = await commands();
+    expect(ran.find((command) => command.includes(" destroy"))).not.toContain("-exclude");
+    const restore = ran.find((command) => command.includes("profiles default update"));
     expect(restore).toMatch(/--exclude \[.*"address":"10\.0\.0\.0\/8"/);
   });
 

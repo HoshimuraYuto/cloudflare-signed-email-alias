@@ -27,8 +27,19 @@ export const DEFAULT_SPLIT_TUNNEL_EXCLUDE = [
   { address: "10.0.0.0/8" },
 ];
 
+/**
+ * Account-wide settings that other projects may rely on. Deploy manages them only when asked
+ * (MANAGE_DEVICE_PROFILE, MANAGE_DEVICE_ENROLLMENT); destroy removes them only with
+ * RESET_SHARED_SETTINGS.
+ */
+const SHARED_RESOURCES = [
+  "cloudflare_zero_trust_device_default_profile.split_tunnel",
+  "cloudflare_zero_trust_access_application.enroll",
+  "cloudflare_zero_trust_access_policy.enroll",
+];
+
 const LEFT_FOR_YOU = `Remove these by hand; they were created outside this project:
-  - the Access service token and the forwarder set up in your password manager
+  - the forwarder set up in your password manager, and the service token stored there
   - the Cloudflare One client on your devices, if you enrolled them only for this
   - the API token this run used
 Keep SIGNING_KEY if you may deploy again: the same key makes old aliases valid again.`;
@@ -36,9 +47,12 @@ Keep SIGNING_KEY if you may deploy again: the same key makes old aliases valid a
 const settings = readSettings(process.env);
 await confirm(settings);
 await initTofu(settings);
-await tofu(settings, ["destroy"]);
+await tofu(settings, [
+  "destroy",
+  ...(settings.resetSharedSettings ? [] : SHARED_RESOURCES.map((name) => `-exclude=${name}`)),
+]);
 await disableCatchAll(settings);
-if (settings.manageDeviceProfile) {
+if (settings.resetSharedSettings && settings.manageDeviceProfile) {
   await restoreSplitTunnel();
 }
 await run("pnpm", ["exec", "cf", "workers", "delete", WORKER_NAME, "--force"]);

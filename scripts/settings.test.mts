@@ -10,13 +10,12 @@ const complete = {
   ALIAS_DOMAIN: "example.com",
   API_HOSTNAME: "alias-api.example.com",
   FORWARD_TO: "inbox@example.net",
-  SERVICE_TOKEN_NAME: "password-manager",
 };
 
 describe("readSettings", () => {
   it("lists every missing variable in one error", () => {
     expect(() => readSettings({ SIGNING_KEY: "signing-key", ALIAS_DOMAIN: "" })).toThrow(
-      /: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, STATE_PASSPHRASE, ALIAS_DOMAIN, API_HOSTNAME, FORWARD_TO, SERVICE_TOKEN_NAME$/,
+      /: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, STATE_PASSPHRASE, ALIAS_DOMAIN, API_HOSTNAME, FORWARD_TO$/,
     );
   });
 
@@ -26,6 +25,20 @@ describe("readSettings", () => {
       /\/\.local\/state\/cloudflare-signed-email-alias\/terraform\.tfstate$/,
     );
     expect(settings.manageDeviceProfile).toBe(false);
+    expect(settings.manageDeviceEnrollment).toBe(false);
+    expect(settings.resetSharedSettings).toBe(false);
+  });
+
+  it("needs ENROLL_EMAILS only when it manages device enrollment", () => {
+    expect(() => readSettings({ ...complete, MANAGE_DEVICE_ENROLLMENT: "true" })).toThrow(
+      /: ENROLL_EMAILS$/,
+    );
+    const settings = readSettings({
+      ...complete,
+      MANAGE_DEVICE_ENROLLMENT: "true",
+      ENROLL_EMAILS: " me@example.net, ,you@example.org ",
+    });
+    expect(settings.enrollEmails).toEqual(["me@example.net", "you@example.org"]);
   });
 
   it("honours STATE_FILE and MANAGE_DEVICE_PROFILE", () => {
@@ -47,8 +60,9 @@ describe("tofuEnv", () => {
       TF_VAR_alias_domain: "example.com",
       TF_VAR_api_hostname: "alias-api.example.com",
       TF_VAR_forward_to: "inbox@example.net",
-      TF_VAR_service_token_name: "password-manager",
       TF_VAR_manage_device_profile: "false",
+      TF_VAR_manage_device_enrollment: "false",
+      TF_VAR_enroll_emails: "[]",
     });
   });
 });

@@ -29,13 +29,20 @@ variable "forward_to" {
   type        = string
 }
 
-variable "service_token_name" {
-  description = "Name of the Access service token created by hand for the password manager."
-  type        = string
-}
-
 variable "manage_device_profile" {
   description = "Overwrite the account's default device profile with this project's split tunnel."
   type        = bool
   default     = false
+}
+
+variable "manage_device_enrollment" {
+  description = "Replace the account's device enrollment permissions with a policy allowing enroll_emails."
+  type        = bool
+  default     = false
+}
+
+variable "enroll_emails" {
+  description = "Addresses that may enroll devices when manage_device_enrollment is true."
+  type        = list(string)
+  default     = []
 }

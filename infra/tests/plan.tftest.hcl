@@ -22,6 +22,10 @@ mock_provider "cloudflare" {
     defaults = { auth_domain = "team.cloudflareaccess.com" }
   }
 
+  mock_data "cloudflare_zero_trust_access_applications" {
+    defaults = { result = [] }
+  }
+
   mock_data "cloudflare_email_routing_catch_all" {
     defaults = { enabled = false, actions = [{ type = "drop", value = null }] }
   }
@@ -33,7 +37,6 @@ variables {
   alias_domain       = "example.com"
   api_hostname       = "alias-api.example.com"
   forward_to         = "inbox@example.net"
-  service_token_name = "password-manager"
 }
 
 run "routes_mail_and_api_to_the_worker" {
@@ -94,6 +97,52 @@ run "manages_the_device_profile_on_request" {
     condition     = toset([for entry in cloudflare_zero_trust_device_default_profile.split_tunnel[0].include : entry.host]) == toset(["alias-api.example.com", "team.cloudflareaccess.com"])
     error_message = "The split tunnel must include the API and the team domain."
   }
+}
+
+run "creates_its_own_service_token" {
+  command = plan
+
+  assert {
+    condition     = cloudflare_zero_trust_access_service_token.client.name == "cloudflare-signed-email-alias"
+    error_message = "The service token belongs to this project, so deploy creates it."
+  }
+}
+
+run "leaves_device_enrollment_alone_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(cloudflare_zero_trust_access_application.enroll) == 0 && length(cloudflare_zero_trust_access_policy.enroll) == 0
+    error_message = "The account's single enrollment application must not be touched unless asked."
+  }
+}
+
+run "manages_device_enrollment_on_request" {
+  command = plan
+
+  variables {
+    manage_device_enrollment = true
+    enroll_emails            = ["me@example.net"]
+  }
+
+  assert {
+    condition     = cloudflare_zero_trust_access_application.enroll[0].type == "warp"
+    error_message = "Device enrollment permissions are the account's warp application."
+  }
+  assert {
+    condition     = cloudflare_zero_trust_access_policy.enroll[0].decision == "allow" && toset([for rule in cloudflare_zero_trust_access_policy.enroll[0].include : rule.email.email]) == toset(["me@example.net"])
+    error_message = "Only the listed addresses may enroll devices."
+  }
+}
+
+run "refuses_to_manage_enrollment_without_addresses" {
+  command = plan
+
+  variables {
+    manage_device_enrollment = true
+  }
+
+  expect_failures = [cloudflare_zero_trust_access_policy.enroll]
 }
 
 run "keeps_its_own_catch_all_on_later_applies" {

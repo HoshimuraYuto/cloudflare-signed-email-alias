@@ -21,9 +21,9 @@ Cloudflareの公式プロジェクトではありません。
 
 ## 最初に一度だけ行う準備
 
-1. Zero Trustで端末の登録を許可します（Device enrollment permissions）。続けて、各端末にCloudflare One Client（モバイルではCloudflare One Agent）を入れ、チーム名を入力してログインします。
-2. Accessのサービストークンを作ります。クライアントIDとシークレットはパスワードマネージャーに保存します。トークンの名前はデプロイで使います。
-3. 署名鍵を作り、パスワードマネージャーに保存します。
+次の値は、それぞれパスワードマネージャーに保存してください。デプロイのときにそこから読みます。
+
+1. **署名鍵**。次のコマンドで作ります。
 
    ```sh
    openssl rand -base64 32
@@ -31,21 +31,23 @@ Cloudflareの公式プロジェクトではありません。
 
    この鍵は必ず保管してください。これまでに作ったすべてのアドレスがこの鍵に依存しています。鍵をなくすと、すべてのアドレスでメールが届かなくなります。同じ鍵でデプロイし直せば、また届くようになります。
 
-4. 対象を自分のアカウントに限ったAPIトークンを、次の権限で作ります。
+2. **APIトークン**。デプロイと削除のときだけ使います。メールの転送やアドレスの作成には使いません。Cloudflareのダッシュボードで**アカウントの管理** → **アカウントAPIトークン** → **トークンを作成** → **カスタムトークンを作成**を開きます。権限はブロックごとに範囲を1つ選び、ブロックにはその範囲で使える権限だけが表示されます。次の2つのブロックを作ります。
 
-   | 範囲    | 権限                                                        |
-   | ------- | ----------------------------------------------------------- |
-   | Account | Workers Scripts: Edit                                       |
-   | Account | Access: Apps and Policies: Edit                             |
-   | Account | Access: Service Tokens: Read                                |
-   | Account | Access: Organizations, Identity Providers, and Groups: Read |
-   | Account | Zero Trust: Edit                                            |
-   | Account | Email Routing Addresses: Edit                               |
-   | Zone    | Zone: Read                                                  |
-   | Zone    | Zone Settings: Edit                                         |
-   | Zone    | Email Routing Rules: Edit                                   |
+   | ブロックの範囲                                     | グループ                    | 権限                                                        |
+   | -------------------------------------------------- | --------------------------- | ----------------------------------------------------------- |
+   | アカウント全体                                     | Developer Platform          | Workers Scripts (legacy): Edit                              |
+   |                                                    | Cloudflare One / Zero Trust | Access: Apps: Edit                                          |
+   |                                                    | Cloudflare One / Zero Trust | Access: Service Tokens: Edit                                |
+   |                                                    | Cloudflare One / Zero Trust | Access: Organizations, Identity Providers, and Groups: Read |
+   |                                                    | Cloudflare One / Zero Trust | Zero Trust: Edit                                            |
+   |                                                    | Email & Messaging           | Email Routing Addresses: Edit                               |
+   | エイリアス用のドメインだけ（**ポリシーを追加**で） | DNS & Zones                 | Zone: Read                                                  |
+   |                                                    | DNS & Zones                 | Zone Settings: Edit                                         |
+   |                                                    | Email & Messaging           | Email Routing Rules: Edit                                   |
 
-5. OpenTofuのstateを暗号化するパスフレーズ（16文字以上）を決め、パスワードマネージャーに保存します。
+   同じ画面の下のほうで、トークンをさらに絞ります。**TTL**はデプロイする予定の期間に、**クライアントIPアドレスのフィルタリング**はデプロイに使う接続元のアドレスにします。デプロイや削除をまた行うときは、トークンを作り直してください。トークンが表示されるのは作成したときの1回だけです。
+
+3. **stateのパスフレーズ**。16文字以上で決めます。OpenTofuが作ったものを記録するファイル（state）を暗号化します。このファイルにはサービストークンも入ります。
 
 ## デプロイ
 
@@ -55,37 +57,46 @@ pnpm install
 pnpm run deploy
 ```
 
-`pnpm run deploy`は設定を環境変数から読みます。秘密の値は、パスワードマネージャーのCLIで取り出して環境変数に入れてください。ファイルには書かないでください。
+`pnpm run deploy`は設定を環境変数から読みます。秘密の値は、パスワードマネージャーのCLIで取り出して環境変数に入れてください（1Passwordなら`op run`、Bitwarden Secrets Managerなら`bws run`）。ファイルには書かないでください。
 
-| 変数                    | 値                                                                                                        |
-| ----------------------- | --------------------------------------------------------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | 準備の手順4で作ったAPIトークン                                                                            |
-| `CLOUDFLARE_ACCOUNT_ID` | CloudflareのアカウントID                                                                                  |
-| `SIGNING_KEY`           | 準備の手順3で作った署名鍵                                                                                 |
-| `STATE_PASSPHRASE`      | 準備の手順5で決めたパスフレーズ                                                                           |
-| `ALIAS_DOMAIN`          | エイリアス専用のドメイン                                                                                  |
-| `API_HOSTNAME`          | そのドメインの中でAPIに使うホスト名（例：`alias-api.example.com`）                                        |
-| `FORWARD_TO`            | メールを受け取る受信箱のアドレス                                                                          |
-| `SERVICE_TOKEN_NAME`    | 準備の手順2で作ったサービストークンの名前                                                                 |
-| `MANAGE_DEVICE_PROFILE` | 任意。`true`にすると、既定のデバイスプロファイルのSplit Tunnelを、このプロジェクトの設定で上書きします    |
-| `STATE_FILE`            | 任意。暗号化したstateの保存先。既定は`~/.local/state/cloudflare-signed-email-alias/terraform.tfstate`です |
+| 変数                    | 値                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | 準備の手順2で作ったAPIトークン                                                                        |
+| `CLOUDFLARE_ACCOUNT_ID` | CloudflareのアカウントID                                                                              |
+| `SIGNING_KEY`           | 準備の手順1で作った署名鍵                                                                             |
+| `STATE_PASSPHRASE`      | 準備の手順3で決めたパスフレーズ                                                                       |
+| `ALIAS_DOMAIN`          | エイリアス専用のドメイン                                                                              |
+| `API_HOSTNAME`          | そのドメインの中でAPIに使うホスト名（例：`alias-api.example.com`）                                    |
+| `FORWARD_TO`            | メールを受け取る受信箱のアドレス                                                                      |
+| `STATE_FILE`            | 任意。暗号化したstateの保存先。既定は`~/.local/state/cloudflare-signed-email-alias/terraform.tfstate` |
 
 このコマンドは、Workerをデプロイしたあと、Cloudflareに加える変更を表示して承認を待ちます。承認すると変更を反映し、最後にAccessの値をWorkerに渡します。設定を変えたときは、もう一度実行してください。何度実行しても問題ありません。
 
-初めてデプロイしたあとに、次の2つを行います。
+### アカウントに1つしかない設定
 
-- Cloudflareから`FORWARD_TO`に確認メールが届きます。メールの中の**Verify email address**を押すまで、転送は始まりません。
-- `MANAGE_DEVICE_PROFILE`を`true`にしていない場合は、出力`warp_include`に表示されたホストを、デバイスプロファイルのSplit Tunnel（Includeモード）に追加してください。これらのホストへの通信をCloudflare One Client経由で送っていない端末からは、APIを使えません。
+次の2つの設定は、Zero Trustのアカウントに1つしかないため、ほかのプロジェクトがすでに使っていることがあります。デプロイは、変数を`true`にしたときだけこれらを変更します。`true`にしない場合は、自分で設定してください（下の「初めてデプロイしたあと」を参照）。
+
+| 変数                       | `true`にしたときの動き                                                           |
+| -------------------------- | -------------------------------------------------------------------------------- |
+| `MANAGE_DEVICE_ENROLLMENT` | 端末を登録できる人を、`ENROLL_EMAILS`のアドレス（カンマ区切り）に置き換える      |
+| `MANAGE_DEVICE_PROFILE`    | 既定のデバイスプロファイルのSplit Tunnelを、このプロジェクトのホストに置き換える |
+
+### 初めてデプロイしたあと
+
+1. **受信箱を確認する**。Cloudflareから`FORWARD_TO`に確認メールが届きます。メールの中の**Verify email address**を押すまで、転送は始まりません。
+2. **端末の登録を許可する**（`MANAGE_DEVICE_ENROLLMENT`が`true`のときは不要）。ダッシュボードで**Zero Trust** → **チームとリソース** → **デバイス** → **管理**タブ → **デバイス登録権限** → **管理**を開き、自分のメールアドレスを含めるポリシーをアクション「許可」で追加して保存します。
+3. **APIへの通信をCloudflare One Client経由にする**（`MANAGE_DEVICE_PROFILE`が`true`のときは不要）。出力`warp_include`に表示されたホストを、デバイスプロファイルのSplit Tunnel（Includeモード）に追加します。これらのホストへの通信をクライアント経由で送っていない端末からは、APIを使えません。
+4. **各端末を登録する**。Cloudflare One Client（モバイルではCloudflare One Agent）を入れ、**Zero Trust security**を選んでチーム名を入力し、メールに届くワンタイムPINでログインします。チーム名は、`<team>.cloudflareaccess.com`の`<team>`の部分です。
 
 ## パスワードマネージャーの設定
 
 Bitwardenで**パス生成** → **ユーザ名**を開き、**タイプ**を**転送されるメールエイリアス**、**サービス**を**Addy.io**にして、次のように入力します。
 
-| 項目                     | 値                                                                                  |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| API キー                 | `{"cf-access-client-id":"<client ID>","cf-access-client-secret":"<client secret>"}` |
-| メールアドレスのドメイン | エイリアス専用のドメイン                                                            |
-| 自己ホスト型サーバー URL | `https://<API_HOSTNAME>`（末尾に`/`を付けない）                                     |
+| 項目                     | 値                                                             |
+| ------------------------ | -------------------------------------------------------------- |
+| API キー                 | `pnpm run service-token`の出力（デプロイと同じ環境変数で実行） |
+| メールアドレスのドメイン | エイリアス専用のドメイン                                       |
+| 自己ホスト型サーバー URL | `https://<API_HOSTNAME>`（末尾に`/`を付けない）                |
 
 アドレスは、ログインアイテムの編集画面から作ってください。アイテムに登録したウェブサイトのドメインが、アドレスの先頭に入ります。パス生成のタブから作ったアドレスは、先頭が`mail`になります。
 
@@ -95,7 +106,7 @@ Bitwardenで**パス生成** → **ユーザ名**を開き、**タイプ**を**�
 pnpm run destroy
 ```
 
-`SIGNING_KEY`以外は、デプロイと同じ環境変数を使います。確認のためにエイリアス専用のドメインを入力すると、Workerと、デプロイで作ったものをすべて削除します。手作業で作ったもののうち自分で削除する必要があるものは、最後に一覧で表示されます。
+`SIGNING_KEY`以外は、デプロイと同じ環境変数を使います。確認のためにエイリアス専用のドメインを入力すると、Workerと、デプロイでこのプロジェクトのために作ったものをすべて削除します。アカウントに1つしかない設定は、ほかのプロジェクトが使っているかもしれないので残します。これらも削除して既定のSplit Tunnelに戻すときは、`RESET_SHARED_SETTINGS=true`を付けてください。自分で削除する必要があるものは、最後に一覧で表示されます。
 
 ## 開発
 
