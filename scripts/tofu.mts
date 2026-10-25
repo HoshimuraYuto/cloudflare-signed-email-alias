@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
@@ -16,6 +17,17 @@ export async function initTofu(settings: Settings): Promise<void> {
     "-reconfigure",
     `-backend-config=path=${settings.stateFile}`,
   ]);
+}
+
+export async function stateResources(settings: Settings): Promise<string[]> {
+  if (!existsSync(settings.stateFile)) {
+    return [];
+  }
+  const list = await run("tofu", ["-chdir=infra", "state", "list"], {
+    env: tofuEnv(settings),
+    capture: true,
+  });
+  return list.split("\n").filter((line) => line !== "");
 }
 
 /** The value of one output, or undefined when the state does not have it. */

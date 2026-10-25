@@ -26,6 +26,16 @@ describe("service-token", () => {
     });
   });
 
+  it("reads the state at STATE_FILE, whatever was initialized before", async () => {
+    cli.run("deploy.mts", COMPLETE_ENV);
+    await cli.forgetCalls();
+
+    cli.runCapturing("service-token.mts", COMPLETE_ENV);
+
+    const [init] = (await cli.calls()).map(({ command }) => command);
+    expect(init).toMatch(/ init .*-backend-config=path=\S+terraform\.tfstate$/);
+  });
+
   it("tells you to deploy first", () => {
     const { status, stderr } = cli.runCapturing("service-token.mts", COMPLETE_ENV);
 

@@ -32,22 +32,20 @@ mock_provider "cloudflare" {
 }
 
 variables {
-  state_passphrase   = "passphrase-for-tests-only"
-  account_id         = "account"
-  alias_domain       = "example.com"
-  api_hostname       = "alias-api.example.com"
-  forward_to         = "inbox@example.net"
+  state_passphrase = "passphrase-for-tests-only"
+  account_id       = "account"
+  forwarding       = { "example.com" = "inbox@example.net" }
 }
 
 run "routes_mail_and_api_to_the_worker" {
   command = plan
 
   assert {
-    condition     = cloudflare_email_routing_catch_all.alias.actions[0].type == "worker" && cloudflare_email_routing_catch_all.alias.actions[0].value[0] == "cloudflare-signed-email-alias"
+    condition     = cloudflare_email_routing_catch_all.alias["example.com"].actions[0].type == "worker" && cloudflare_email_routing_catch_all.alias["example.com"].actions[0].value[0] == "cloudflare-signed-email-alias"
     error_message = "The catch-all must hand every alias to the Worker."
   }
   assert {
-    condition     = cloudflare_workers_custom_domain.api.hostname == "alias-api.example.com" && cloudflare_workers_custom_domain.api.service == "cloudflare-signed-email-alias"
+    condition     = cloudflare_workers_custom_domain.api["example.com"].hostname == "email-alias-api.example.com" && cloudflare_workers_custom_domain.api["example.com"].service == "cloudflare-signed-email-alias"
     error_message = "The API hostname must point at the Worker."
   }
   assert {
@@ -81,7 +79,7 @@ run "leaves_the_device_profile_alone_by_default" {
     error_message = "The shared default profile must not be touched unless asked."
   }
   assert {
-    condition     = toset([for entry in output.warp_include : entry.host]) == toset(["alias-api.example.com", "team.cloudflareaccess.com"])
+    condition     = toset([for entry in output.warp_include : entry.host]) == toset(["email-alias-api.example.com", "team.cloudflareaccess.com"])
     error_message = "The hosts to route through WARP must still be reported."
   }
 }
@@ -94,7 +92,7 @@ run "manages_the_device_profile_on_request" {
   }
 
   assert {
-    condition     = toset([for entry in cloudflare_zero_trust_device_default_profile.split_tunnel[0].include : entry.host]) == toset(["alias-api.example.com", "team.cloudflareaccess.com"])
+    condition     = toset([for entry in cloudflare_zero_trust_device_default_profile.split_tunnel[0].include : entry.host]) == toset(["email-alias-api.example.com", "team.cloudflareaccess.com"])
     error_message = "The split tunnel must include the API and the team domain."
   }
 }
@@ -149,7 +147,7 @@ run "keeps_its_own_catch_all_on_later_applies" {
   command = plan
 
   override_data {
-    target = data.cloudflare_email_routing_catch_all.current
+    target = data.cloudflare_email_routing_catch_all.current["example.com"]
     values = { enabled = true, actions = [{ type = "worker", value = ["cloudflare-signed-email-alias"] }] }
   }
 }
@@ -158,19 +156,106 @@ run "refuses_a_zone_whose_catch_all_is_in_use" {
   command = plan
 
   override_data {
-    target = data.cloudflare_email_routing_catch_all.current
+    target = data.cloudflare_email_routing_catch_all.current["example.com"]
     values = { enabled = true, actions = [{ type = "forward", value = ["someone@example.net"] }] }
   }
 
-  expect_failures = [cloudflare_email_routing_catch_all.alias]
+  expect_failures = [cloudflare_email_routing_catch_all.alias["example.com"]]
 }
 
-run "rejects_an_api_hostname_outside_the_alias_zone" {
+run "gives_each_domain_its_own_hostname_and_inbox" {
   command = plan
 
   variables {
-    api_hostname = "alias-api.example.org"
+    forwarding = {
+      "example.com" = "inbox@example.net"
+      "example.org" = "other@example.net"
+    }
   }
 
-  expect_failures = [var.api_hostname]
+  assert {
+    condition     = toset([for domain in cloudflare_workers_custom_domain.api : domain.hostname]) == toset(["email-alias-api.example.com", "email-alias-api.example.org"])
+    error_message = "Every alias domain needs its own API hostname."
+  }
+  assert {
+    condition     = toset(keys(cloudflare_email_routing_catch_all.alias)) == toset(["example.com", "example.org"]) && toset(keys(cloudflare_email_routing_dns.alias)) == toset(["example.com", "example.org"])
+    error_message = "Every alias domain needs Email Routing and a catch-all to the Worker."
+  }
+  assert {
+    condition     = toset([for address in cloudflare_email_routing_address.destination : address.email]) == toset(["inbox@example.net", "other@example.net"])
+    error_message = "Every inbox must be registered as a destination."
+  }
+  assert {
+    condition     = toset([for entry in output.warp_include : entry.host]) == toset(["email-alias-api.example.com", "email-alias-api.example.org", "team.cloudflareaccess.com"])
+    error_message = "Devices must route every API hostname through WARP."
+  }
+}
+
+run "registers_a_shared_inbox_once" {
+  command = plan
+
+  variables {
+    forwarding = {
+      "example.com" = "inbox@example.net"
+      "example.org" = "inbox@example.net"
+    }
+  }
+
+  assert {
+    condition     = length(cloudflare_email_routing_address.destination) == 1
+    error_message = "One inbox serving two domains is one destination address."
+  }
+}
+
+run "uses_the_chosen_api_subdomain" {
+  command = plan
+
+  variables {
+    api_subdomain = "aliases"
+  }
+
+  assert {
+    condition     = cloudflare_workers_custom_domain.api["example.com"].hostname == "aliases.example.com"
+    error_message = "The API hostname must use api_subdomain."
+  }
+}
+
+run "rejects_an_api_subdomain_with_a_dot" {
+  command = plan
+
+  variables {
+    api_subdomain = "a.b"
+  }
+
+  expect_failures = [var.api_subdomain]
+}
+
+run "rejects_no_alias_domain" {
+  command = plan
+
+  variables {
+    forwarding = {}
+  }
+
+  expect_failures = [var.forwarding]
+}
+
+run "rejects_an_upper_case_inbox" {
+  command = plan
+
+  variables {
+    forwarding = { "example.com" = "Inbox@example.net" }
+  }
+
+  expect_failures = [var.forwarding]
+}
+
+run "rejects_an_upper_case_domain" {
+  command = plan
+
+  variables {
+    forwarding = { "Example.com" = "inbox@example.net" }
+  }
+
+  expect_failures = [var.forwarding]
 }

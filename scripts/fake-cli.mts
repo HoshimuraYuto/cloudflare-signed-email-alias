@@ -23,6 +23,7 @@ case "$*" in
   *" init"*) echo "OpenTofu has been successfully initialized!" ;;
   *" apply"*) touch "$APPLIED" ;;
   *" output "*) if [ -f "$APPLIED" ]; then echo '${ACCESS_OUTPUT}'; else echo '{}'; fi ;;
+  *" state list"*) cat "$STATE_LIST" ;;
 esac
 `;
 const FAKE_PNPM = `#!/bin/sh
@@ -41,6 +42,8 @@ export interface FakeCli {
     script: string,
     env: Record<string, string>,
   ) => { status: number | null; stdout: string; stderr: string };
+  /** Makes the state file exist and hold these resource addresses. */
+  recordState: (resources: string[]) => Promise<void>;
   calls: () => Promise<Call[]>;
   forgetCalls: () => Promise<void>;
   remove: () => Promise<void>;
@@ -64,7 +67,8 @@ export async function createFakeCli(): Promise<FakeCli> {
         PATH: `${dir}:${process.env["PATH"] ?? ""}`,
         CALLS: log,
         APPLIED: join(dir, "applied"),
-        STATE_FILE: join(dir, "state", "terraform.tfstate"),
+        STATE_FILE: join(dir, "terraform.tfstate"),
+        STATE_LIST: join(dir, "state-list"),
         ...env,
       },
     });
@@ -74,6 +78,10 @@ export async function createFakeCli(): Promise<FakeCli> {
     runCapturing: (script, env) => {
       const { status, stdout, stderr } = spawnScript(script, env);
       return { status, stdout, stderr };
+    },
+    recordState: async (resources) => {
+      await writeFile(join(dir, "terraform.tfstate"), "");
+      await writeFile(join(dir, "state-list"), resources.map((name) => `${name}\n`).join(""));
     },
     calls: async () => {
       const text = await readFile(log, "utf8").catch(() => "");
@@ -99,7 +107,5 @@ export const COMPLETE_ENV = {
   CLOUDFLARE_ACCOUNT_ID: "account",
   SIGNING_KEY: "signing-key-for-tests",
   STATE_PASSPHRASE: "passphrase-for-tests",
-  ALIAS_DOMAIN: "example.com",
-  API_HOSTNAME: "alias-api.example.com",
-  FORWARD_TO: "inbox@example.net",
+  FORWARD_TO: "example.com=inbox@example.net",
 };

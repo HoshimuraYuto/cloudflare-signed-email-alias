@@ -1,8 +1,8 @@
 locals {
-  warp_include = [
-    { host = var.api_hostname, description = "Alias API" },
-    { host = data.cloudflare_zero_trust_organization.team.auth_domain, description = "Access team domain, needed for device posture" },
-  ]
+  warp_include = concat(
+    [for domain in keys(var.forwarding) : { host = "${var.api_subdomain}.${domain}", description = "Alias API" }],
+    [{ host = data.cloudflare_zero_trust_organization.team.auth_domain, description = "Access team domain, needed for device posture" }],
+  )
 }
 
 # The default profile and the enrollment application exist once per account, so other

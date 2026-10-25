@@ -1,6 +1,7 @@
 import { getDomainWithoutSuffix } from "tldts-icann";
 
 import { createAddress, importSigningKey } from "./address.mts";
+import { parseForwarding } from "./forwarding.mts";
 
 const ALIASES_PATH = "/api/v1/aliases";
 const FALLBACK_SERVICE = "mail";
@@ -9,8 +10,8 @@ const HOSTNAME_PATTERN = /[a-z0-9-]+(?:\.[a-z0-9-]+)+/i;
 
 interface ApiSettings {
   signingKey: string;
-  /** Comma-separated domains an alias may use. */
-  aliasDomains: string;
+  /** FORWARD_TO as parseForwarding reads it. */
+  forwarding: string;
 }
 
 interface CreateAliasRequest {
@@ -20,6 +21,7 @@ interface CreateAliasRequest {
 
 /**
  * Answers POST /api/v1/aliases the way addy.io does, so Bitwarden can use it as a forwarder.
+ * Each alias domain has its own API hostname, which creates addresses only in that domain.
  * Throws when the settings are unusable.
  */
 export async function handleApi(request: Request, settings: ApiSettings): Promise<Response> {
@@ -28,14 +30,15 @@ export async function handleApi(request: Request, settings: ApiSettings): Promis
     return new Response(null, { status: 404 });
   }
   const key = await importSigningKey(settings.signingKey);
-  const domains = parseDomains(settings.aliasDomains);
+  const forwarding = parseForwarding(settings.forwarding);
 
   const body = await readBody(request);
   if (body === null) {
     return Response.json({ message: "Invalid request" }, { status: 400 });
   }
   const domain = body.domain.trim().toLowerCase();
-  if (!domains.has(domain)) {
+  const hostDomain = url.hostname.slice(url.hostname.indexOf(".") + 1);
+  if (!forwarding.has(domain) || hostDomain !== domain) {
     return Response.json({ message: "Unknown domain" }, { status: 403 });
   }
   const service = serviceFromDescription(body.description);
@@ -55,19 +58,6 @@ export function serviceFromDescription(description: string): string {
     .replaceAll(/[^a-z0-9-]/g, "")
     .slice(0, MAX_SERVICE_LENGTH);
   return service === "" ? FALLBACK_SERVICE : service;
-}
-
-function parseDomains(aliasDomains: string): Set<string> {
-  const domains = new Set(
-    aliasDomains
-      .split(",")
-      .map((domain) => domain.trim().toLowerCase())
-      .filter((domain) => domain !== ""),
-  );
-  if (domains.size === 0) {
-    throw new Error("ALIAS_DOMAINS is not set");
-  }
-  return domains;
 }
 
 async function readBody(request: Request): Promise<CreateAliasRequest | null> {

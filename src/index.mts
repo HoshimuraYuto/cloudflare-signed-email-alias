@@ -12,9 +12,9 @@ export default {
     if (!(await isFromAccess(request, access))) {
       return Response.json({ message: "Forbidden" }, { status: 403 });
     }
-    return handleApi(request, { signingKey: env.SIGNING_KEY, aliasDomains: env.ALIAS_DOMAINS });
+    return handleApi(request, { signingKey: env.SIGNING_KEY, forwarding: env.FORWARD_TO });
   },
   async email(message, env, _ctx) {
-    await handleEmail(message, { signingKey: env.SIGNING_KEY, forwardTo: env.FORWARD_TO });
+    await handleEmail(message, { signingKey: env.SIGNING_KEY, forwarding: env.FORWARD_TO });
   },
 } satisfies ExportedHandler<Env>;

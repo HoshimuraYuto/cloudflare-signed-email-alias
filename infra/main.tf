@@ -42,12 +42,16 @@ data "cloudflare_workers" "all" {
 }
 
 data "cloudflare_zone" "alias" {
-  filter = { name = var.alias_domain }
+  for_each = var.forwarding
+
+  filter = { name = each.key }
 }
 
 resource "cloudflare_workers_custom_domain" "api" {
+  for_each = data.cloudflare_zone.alias
+
   account_id = var.account_id
-  zone_id    = data.cloudflare_zone.alias.id
-  hostname   = var.api_hostname
+  zone_id    = each.value.id
+  hostname   = "${var.api_subdomain}.${each.key}"
   service    = local.worker_name
 }

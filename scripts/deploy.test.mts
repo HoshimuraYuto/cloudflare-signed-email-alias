@@ -33,8 +33,7 @@ async function deployedSecrets(): Promise<unknown[]> {
 function workerSecrets(access: Record<string, string>) {
   return {
     SIGNING_KEY: COMPLETE_ENV.SIGNING_KEY,
-    FORWARD_TO: "inbox@example.net",
-    ALIAS_DOMAINS: "example.com",
+    FORWARD_TO: "example.com=inbox@example.net",
     ...access,
   };
 }
@@ -71,6 +70,37 @@ describe("deploy", () => {
     for (const { command } of await cli.calls()) {
       expect(command).not.toMatch(new RegExp(secrets.join("|")));
     }
+  });
+
+  it.each([
+    ["MANAGE_DEVICE_ENROLLMENT", "cloudflare_zero_trust_access_application.enroll[0]"],
+    ["MANAGE_DEVICE_PROFILE", "cloudflare_zero_trust_device_default_profile.split_tunnel[0]"],
+  ])("refuses to drop %s while the state holds what it managed", async (flag, resource) => {
+    await cli.recordState([resource]);
+
+    const { status, stderr } = cli.runCapturing("deploy.mts", COMPLETE_ENV);
+
+    expect(status).not.toBe(0);
+    expect(stderr).toContain(flag);
+    expect(await steps()).toEqual(["init", "tofu -chdir=infra state list"]);
+  });
+
+  it("deploys when the flag that created a shared setting is still on", async () => {
+    await cli.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
+    const env = {
+      ...COMPLETE_ENV,
+      MANAGE_DEVICE_ENROLLMENT: "true",
+      ENROLL_EMAILS: "me@example.net",
+    };
+
+    expect(cli.run("deploy.mts", env)).toBe(0);
+  });
+
+  it("needs ENROLL_EMAILS while it manages enrollment", async () => {
+    const env = { ...COMPLETE_ENV, MANAGE_DEVICE_ENROLLMENT: "true" };
+
+    expect(cli.run("deploy.mts", env)).not.toBe(0);
+    expect(await cli.calls()).toEqual([]);
   });
 
   it("runs nothing when a variable is missing", async () => {

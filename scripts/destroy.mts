@@ -1,8 +1,15 @@
 import { createInterface } from "node:readline/promises";
 
 import { run } from "./run.mts";
-import { readSettings, WORKER_NAME, type Settings } from "./settings.mts";
-import { initTofu, tofu } from "./tofu.mts";
+import {
+  isRecorded,
+  readSettings,
+  SHARED_RESOURCES,
+  splitList,
+  WORKER_NAME,
+  type Settings,
+} from "./settings.mts";
+import { initTofu, stateResources, tofu } from "./tofu.mts";
 
 /**
  * Split tunnel entries Cloudflare recommends for a new organization, from
@@ -27,17 +34,6 @@ export const DEFAULT_SPLIT_TUNNEL_EXCLUDE = [
   { address: "10.0.0.0/8" },
 ];
 
-/**
- * Account-wide settings that other projects may rely on. Deploy manages them only when asked
- * (MANAGE_DEVICE_PROFILE, MANAGE_DEVICE_ENROLLMENT); destroy removes them only with
- * RESET_SHARED_SETTINGS.
- */
-const SHARED_RESOURCES = [
-  "cloudflare_zero_trust_device_default_profile.split_tunnel",
-  "cloudflare_zero_trust_access_application.enroll",
-  "cloudflare_zero_trust_access_policy.enroll",
-];
-
 const LEFT_FOR_YOU = `Remove these by hand; they were created outside this project:
   - the forwarder set up in your password manager, and the service token stored there
   - the Cloudflare One client on your devices, if you enrolled them only for this
@@ -47,31 +43,41 @@ Keep SIGNING_KEY if you may deploy again: the same key makes old aliases valid a
 const settings = readSettings(process.env);
 await confirm(settings);
 await initTofu(settings);
+const recorded = await stateResources(settings);
+const shared = Object.values(SHARED_RESOURCES).flat();
 await tofu(settings, [
   "destroy",
-  ...(settings.resetSharedSettings ? [] : SHARED_RESOURCES.map((name) => `-exclude=${name}`)),
+  ...(settings.resetSharedSettings ? [] : shared.map((name) => `-exclude=${name}`)),
 ]);
-await disableCatchAll(settings);
-if (settings.resetSharedSettings && settings.manageDeviceProfile) {
+for (const domain of settings.forwarding.keys()) {
+  await disableCatchAll(domain);
+}
+// Decided by the state, not the flag: a later run may have the flag off.
+if (
+  settings.resetSharedSettings &&
+  isRecorded(recorded, SHARED_RESOURCES.MANAGE_DEVICE_PROFILE[0])
+) {
   await restoreSplitTunnel();
 }
 await run("pnpm", ["exec", "cf", "workers", "delete", WORKER_NAME, "--force"]);
 console.log(LEFT_FOR_YOU);
 
-/** Mail to every alias stops for good, so the alias domain must be typed back. */
+/** Mail to every alias stops for good, so every alias domain must be typed back. */
 async function confirm(current: Settings): Promise<void> {
+  const domains = [...current.forwarding.keys()];
   const prompt = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await prompt.question(
-    `Every alias at ${current.get("ALIAS_DOMAIN")} stops receiving mail. Type the domain to continue: `,
+    `Every alias at ${domains.join(", ")} stops receiving mail. Type these domains, separated by commas, to continue: `,
   );
   prompt.close();
-  if (answer.trim() !== current.get("ALIAS_DOMAIN")) {
-    throw new Error("The domain did not match; nothing was removed.");
+  const typed = new Set(splitList(answer.toLowerCase()));
+  if (typed.size !== domains.length || domains.some((domain) => !typed.has(domain))) {
+    throw new Error("The domains did not match; nothing was removed.");
   }
 }
 
 // The provider leaves the catch-all in place on destroy.
-async function disableCatchAll(current: Settings): Promise<void> {
+async function disableCatchAll(domain: string): Promise<void> {
   await run("pnpm", [
     "exec",
     "cf",
@@ -80,7 +86,7 @@ async function disableCatchAll(current: Settings): Promise<void> {
     "catch-all",
     "update",
     "--zone",
-    current.get("ALIAS_DOMAIN"),
+    domain,
     "--enabled=false",
     "--matchers",
     JSON.stringify([{ type: "all" }]),

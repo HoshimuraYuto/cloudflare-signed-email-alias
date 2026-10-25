@@ -1,26 +1,37 @@
 resource "cloudflare_email_routing_dns" "alias" {
-  zone_id = data.cloudflare_zone.alias.id
+  for_each = data.cloudflare_zone.alias
+
+  zone_id = each.value.id
 }
 
+# Destination addresses belong to the account, so two domains may share one inbox.
 resource "cloudflare_email_routing_address" "destination" {
+  for_each = toset(values(var.forwarding))
+
   account_id = var.account_id
-  email      = var.forward_to
+  email      = each.value
 }
 
 data "cloudflare_email_routing_catch_all" "current" {
-  zone_id = data.cloudflare_zone.alias.id
+  for_each = data.cloudflare_zone.alias
+
+  zone_id = each.value.id
 }
 
 locals {
-  catch_all_is_ours = anytrue([
-    for action in coalesce(data.cloudflare_email_routing_catch_all.current.actions, []) :
-    action.type == "worker" && contains(coalesce(action.value, []), local.worker_name)
-  ])
+  catch_all_is_ours = {
+    for domain, catch_all in data.cloudflare_email_routing_catch_all.current : domain => anytrue([
+      for action in coalesce(catch_all.actions, []) :
+      action.type == "worker" && contains(coalesce(action.value, []), local.worker_name)
+    ])
+  }
 }
 
-# Catch-all rules exist only on a zone apex, which is why the zone must be dedicated to aliases.
+# Catch-all rules exist only on a zone apex, which is why each zone must be dedicated to aliases.
 resource "cloudflare_email_routing_catch_all" "alias" {
-  zone_id  = data.cloudflare_zone.alias.id
+  for_each = data.cloudflare_zone.alias
+
+  zone_id  = each.value.id
   name     = local.worker_name
   enabled  = true
   matchers = [{ type = "all" }]
@@ -30,8 +41,8 @@ resource "cloudflare_email_routing_catch_all" "alias" {
 
   lifecycle {
     precondition {
-      condition     = data.cloudflare_email_routing_catch_all.current.enabled != true || local.catch_all_is_ours
-      error_message = "The alias zone already sends its catch-all somewhere else. Use a zone dedicated to aliases."
+      condition     = data.cloudflare_email_routing_catch_all.current[each.key].enabled != true || local.catch_all_is_ours[each.key]
+      error_message = "${each.key} already sends its catch-all somewhere else. Use a zone dedicated to aliases."
     }
   }
 }

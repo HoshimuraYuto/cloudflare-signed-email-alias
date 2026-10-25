@@ -9,24 +9,29 @@ variable "account_id" {
   type        = string
 }
 
-variable "alias_domain" {
-  description = "Zone used only for aliases. All of its mail goes to the Worker."
-  type        = string
-}
-
-variable "api_hostname" {
-  description = "Hostname inside the alias zone that serves the API, such as alias-api.example.com."
-  type        = string
+variable "forwarding" {
+  description = "Alias domain => inbox its mail goes to. Each domain is a zone used only for aliases."
+  type        = map(string)
 
   validation {
-    condition     = endswith(var.api_hostname, ".${var.alias_domain}")
-    error_message = "api_hostname must be a subdomain of alias_domain."
+    condition     = length(var.forwarding) > 0
+    error_message = "List at least one alias domain."
+  }
+  validation {
+    condition     = alltrue([for domain, inbox in var.forwarding : domain == lower(domain) && inbox == lower(inbox)])
+    error_message = "Write the alias domains and inboxes in lower case."
   }
 }
 
-variable "forward_to" {
-  description = "Mailbox that receives mail sent to valid aliases."
+variable "api_subdomain" {
+  description = "Name of the API hostname created in every alias domain."
   type        = string
+  default     = "email-alias-api"
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.api_subdomain))
+    error_message = "api_subdomain must be one DNS label, such as email-alias-api."
+  }
 }
 
 variable "manage_device_profile" {

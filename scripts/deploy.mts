@@ -1,6 +1,6 @@
 import { run } from "./run.mts";
-import { readSettings, type Settings } from "./settings.mts";
-import { initTofu, tofu, tofuOutput } from "./tofu.mts";
+import { flagsThatWouldDelete, readSettings, type Settings } from "./settings.mts";
+import { initTofu, stateResources, tofu, tofuOutput } from "./tofu.mts";
 
 type Secrets = Record<string, string>;
 
@@ -11,8 +11,14 @@ const PENDING_ACCESS_SECRETS: Secrets = {
   ACCESS_CLIENT_ID: "pending",
 };
 
-const settings = readSettings(process.env, ["SIGNING_KEY"]);
+const settings = readSettings(process.env, ["SIGNING_KEY", "ENROLL_EMAILS"]);
 await initTofu(settings);
+const dropped = flagsThatWouldDelete(settings, await stateResources(settings));
+if (dropped.length > 0) {
+  throw new Error(
+    `${dropped.join(", ")} managed account-wide settings in an earlier deployment; deploying without it would delete them. Set it to true again, or remove everything with pnpm run destroy and RESET_SHARED_SETTINGS=true.`,
+  );
+}
 const before = await accessSecrets(settings);
 await deployWorker(settings, before ?? PENDING_ACCESS_SECRETS);
 await tofu(settings, ["apply"]);
@@ -42,7 +48,6 @@ async function deployWorker(current: Settings, access: Secrets): Promise<void> {
   const secrets: Secrets = {
     SIGNING_KEY: current.get("SIGNING_KEY"),
     FORWARD_TO: current.get("FORWARD_TO"),
-    ALIAS_DOMAINS: current.get("ALIAS_DOMAIN"),
     ...access,
   };
   await run("pnpm", ["exec", "cf", "deploy", "--secrets-file", "/dev/stdin"], {

@@ -7,15 +7,13 @@ const complete = {
   CLOUDFLARE_ACCOUNT_ID: "account",
   SIGNING_KEY: "signing-key",
   STATE_PASSPHRASE: "passphrase",
-  ALIAS_DOMAIN: "example.com",
-  API_HOSTNAME: "alias-api.example.com",
-  FORWARD_TO: "inbox@example.net",
+  FORWARD_TO: "example.com=inbox@example.net",
 };
 
 describe("readSettings", () => {
   it("lists every missing variable in one error", () => {
-    expect(() => readSettings({ SIGNING_KEY: "signing-key", ALIAS_DOMAIN: "" })).toThrow(
-      /: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, STATE_PASSPHRASE, ALIAS_DOMAIN, API_HOSTNAME, FORWARD_TO$/,
+    expect(() => readSettings({ SIGNING_KEY: "signing-key", FORWARD_TO: "" })).toThrow(
+      /: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, STATE_PASSPHRASE, FORWARD_TO$/,
     );
   });
 
@@ -29,10 +27,32 @@ describe("readSettings", () => {
     expect(settings.resetSharedSettings).toBe(false);
   });
 
-  it("needs ENROLL_EMAILS only when it manages device enrollment", () => {
-    expect(() => readSettings({ ...complete, MANAGE_DEVICE_ENROLLMENT: "true" })).toThrow(
-      /: ENROLL_EMAILS$/,
+  it("reads several alias domains and an API subdomain", () => {
+    const settings = readSettings({
+      ...complete,
+      FORWARD_TO: "example.com=inbox@example.net,example.org=other@example.net",
+      API_SUBDOMAIN: "aliases",
+    });
+    expect(tofuEnv(settings)).toMatchObject({
+      TF_VAR_forwarding: JSON.stringify({
+        "example.com": "inbox@example.net",
+        "example.org": "other@example.net",
+      }),
+      TF_VAR_api_subdomain: "aliases",
+    });
+  });
+
+  it("refuses a malformed FORWARD_TO before anything runs", () => {
+    expect(() => readSettings({ ...complete, FORWARD_TO: "inbox@example.net" })).toThrow(
+      /domain=inbox/,
     );
+  });
+
+  it("needs ENROLL_EMAILS only when it manages device enrollment", () => {
+    const enrolling = { ...complete, MANAGE_DEVICE_ENROLLMENT: "true" };
+    expect(() => readSettings(enrolling, ["ENROLL_EMAILS"])).toThrow(/: ENROLL_EMAILS$/);
+    expect(() => readSettings(enrolling)).not.toThrow();
+    expect(() => readSettings(complete, ["ENROLL_EMAILS"])).not.toThrow();
     const settings = readSettings({
       ...complete,
       MANAGE_DEVICE_ENROLLMENT: "true",
@@ -57,9 +77,7 @@ describe("tofuEnv", () => {
     expect(tofuEnv(readSettings(complete))).toEqual({
       TF_VAR_state_passphrase: "passphrase",
       TF_VAR_account_id: "account",
-      TF_VAR_alias_domain: "example.com",
-      TF_VAR_api_hostname: "alias-api.example.com",
-      TF_VAR_forward_to: "inbox@example.net",
+      TF_VAR_forwarding: JSON.stringify({ "example.com": "inbox@example.net" }),
       TF_VAR_manage_device_profile: "false",
       TF_VAR_manage_device_enrollment: "false",
       TF_VAR_enroll_emails: "[]",

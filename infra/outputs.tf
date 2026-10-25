@@ -1,8 +1,6 @@
 output "worker_secrets" {
-  description = "Values for the Worker secrets of the same names, except SIGNING_KEY."
+  description = "Access values for the Worker secrets of the same names."
   value = {
-    ALIAS_DOMAINS      = var.alias_domain
-    FORWARD_TO         = var.forward_to
     ACCESS_TEAM_DOMAIN = data.cloudflare_zero_trust_organization.team.auth_domain
     ACCESS_AUD         = cloudflare_zero_trust_access_application.api.aud
     ACCESS_CLIENT_ID   = cloudflare_zero_trust_access_service_token.client.client_id
