@@ -71,6 +71,8 @@ pnpm run deploy
 | `API_SUBDOMAIN`         | 任意。各ドメインに作るAPIのホスト名。既定は`email-alias-api`で、`email-alias-api.example.com`のようになる               |
 | `STATE_FILE`            | 任意。暗号化したstateの保存先。既定は`~/.local/state/cloudflare-signed-email-alias/terraform.tfstate`                   |
 
+出力には、エイリアス用のドメインと受信箱がそのまま表示されます。バグ報告などで人に見せるときは、これらを伏せてください。
+
 このコマンドは、Workerをデプロイしたあと、Cloudflareに加える変更を表示して承認を待ちます。承認すると変更を反映し、最後にAccessの値をWorkerに渡します。設定を変えたときは、もう一度実行してください。何度実行しても問題ありません。
 
 ### アカウントに1つしかない設定

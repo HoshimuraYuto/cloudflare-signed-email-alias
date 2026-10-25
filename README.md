@@ -96,6 +96,9 @@ your password manager's CLI into the environment, for example with `op run` (1Pa
 | `API_SUBDOMAIN`         | Optional. The API hostname created in every alias domain; `email-alias-api` by default, which gives `email-alias-api.example.com` |
 | `STATE_FILE`            | Optional. Where the encrypted state is kept; defaults to `~/.local/state/cloudflare-signed-email-alias/terraform.tfstate`         |
 
+The output names your alias domains and inboxes; hide them before sharing it, for example
+in a bug report.
+
 The command deploys the Worker, shows the Cloudflare changes and waits for your approval,
 then passes the Access values to the Worker. Run it again after any change; it is safe to
 repeat.
