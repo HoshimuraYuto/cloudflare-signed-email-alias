@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { parseForwarding } from "../src/forwarding.mts";
 
@@ -57,8 +57,9 @@ export function readSettings(
     forwarding: parseForwarding(env["FORWARD_TO"] ?? ""),
     apiSubdomain: apiSubdomain === "" ? undefined : apiSubdomain,
     dmarcPolicy: dmarcPolicy === "" ? undefined : dmarcPolicy,
-    stateFile:
+    stateFile: resolve(
       env["STATE_FILE"] ?? join(homedir(), ".local", "state", WORKER_NAME, "terraform.tfstate"),
+    ),
     manageDeviceProfile: env["MANAGE_DEVICE_PROFILE"] === "true",
     manageGatewayProxy: env["MANAGE_GATEWAY_PROXY"] === "true",
     manageDeviceEnrollment,

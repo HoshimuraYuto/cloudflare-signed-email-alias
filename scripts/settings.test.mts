@@ -68,6 +68,11 @@ describe("readSettings", () => {
     expect(settings.enrollEmails).toEqual(["me@example.net", "you@example.org"]);
   });
 
+  it("makes a relative STATE_FILE absolute, since tofu runs from infra/", () => {
+    const settings = readSettings({ ...complete, STATE_FILE: "state/terraform.tfstate" });
+    expect(settings.stateFile).toBe(`${process.cwd()}/state/terraform.tfstate`);
+  });
+
   it("honours STATE_FILE and MANAGE_DEVICE_PROFILE", () => {
     const settings = readSettings({
       ...complete,
