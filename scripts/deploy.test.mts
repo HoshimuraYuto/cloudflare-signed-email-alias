@@ -110,10 +110,11 @@ describe("deploy", () => {
     expect(fake.current.run("deploy.mts", env)).toBe(0);
   });
 
-  it("deploys without ENROLL_EMAILS while it manages enrollment, which closes enrollment", () => {
+  it("needs ENROLL_EMAILS while it manages enrollment", async () => {
     const env = { ...COMPLETE_ENV, MANAGE_DEVICE_ENROLLMENT: "true" };
 
-    expect(fake.current.run("deploy.mts", env)).toBe(0);
+    expect(fake.current.run("deploy.mts", env)).not.toBe(0);
+    expect(await fake.current.calls()).toEqual([]);
   });
 
   it("hands tofu the state encryption and a data directory outside the repository", async () => {

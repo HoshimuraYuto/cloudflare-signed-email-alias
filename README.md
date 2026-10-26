@@ -119,12 +119,12 @@ These settings exist once per Zero Trust account or per domain, so other project
 already use them. Deployment changes them only when you set the variable to `true` (or
 `DMARC_POLICY` to a policy); otherwise you configure them by hand.
 
-| Variable                   | What it sets                                                                                                                                               |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MANAGE_DEVICE_ENROLLMENT` | Adds a policy that lets the addresses in `ENROLL_EMAILS` (comma-separated) enroll devices; existing policies stay. Without addresses, enrollment is closed |
-| `MANAGE_DEVICE_PROFILE`    | Sets the split tunnel of the default device profile to include mode with only this project's hosts                                                         |
-| `MANAGE_GATEWAY_PROXY`     | Turns on **Allow Secure Web Gateway to proxy traffic** (TCP), which the device check on the API needs                                                      |
-| `DMARC_POLICY`             | Publishes a DMARC record with this policy (`none`, `quarantine` or `reject`) on every alias domain                                                         |
+| Variable                   | What it sets                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `MANAGE_DEVICE_ENROLLMENT` | Adds a policy that lets the addresses in `ENROLL_EMAILS` (comma-separated) enroll devices; existing policies stay |
+| `MANAGE_DEVICE_PROFILE`    | Sets the split tunnel of the default device profile to include mode with only this project's hosts                |
+| `MANAGE_GATEWAY_PROXY`     | Turns on **Allow Secure Web Gateway to proxy traffic** (TCP), which the device check on the API needs             |
+| `DMARC_POLICY`             | Publishes a DMARC record with this policy (`none`, `quarantine` or `reject`) on every alias domain                |
 
 - Deployment remembers the values these had before and puts them back when you remove the
   project with `RESET_SHARED_SETTINGS=true`.
@@ -138,7 +138,7 @@ already use them. Deployment changes them only when you set the variable to `tru
 
 ### After the first deployment
 
-With every variable above set, three steps remain:
+With every variable above set, two steps remain:
 
 1. **Confirm each inbox.** Cloudflare sends a verification email to every inbox in
    `FORWARD_TO`. Mail is forwarded only after you select **Verify email address** in it.
@@ -147,12 +147,6 @@ With every variable above set, three steps remain:
    - Choose **Zero Trust security** and enter your team name: the `<team>` part of
      `<team>.cloudflareaccess.com`.
    - Sign in with the one-time PIN sent to your email address.
-3. **Close enrollment** once every device is enrolled: empty `ENROLL_EMAILS` and run
-   `pnpm run deploy` again.
-   - Enrolled devices stay connected; nobody can enroll a new one.
-   - Otherwise anyone who gets both the service token and the one-time PIN sent to your
-     inbox can enroll a device of their own and create addresses.
-   - To add a device later, set `ENROLL_EMAILS` again, enroll it, then empty it.
 
 If Chrome gets 403 (Forbidden) while WARP is connected, check its secure DNS in
 `chrome://settings/security`:

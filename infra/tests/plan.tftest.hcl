@@ -185,17 +185,14 @@ run "puts_the_recorded_policies_back_when_releasing_enrollment" {
   }
 }
 
-run "closes_enrollment_without_addresses" {
+run "refuses_to_manage_enrollment_without_addresses" {
   command = plan
 
   variables {
     manage_device_enrollment = true
   }
 
-  assert {
-    condition     = length(cloudflare_zero_trust_access_policy.enroll) == 0 && length(cloudflare_zero_trust_access_application.enroll[0].policies) == 0
-    error_message = "Without addresses this project must not allow anyone to enroll."
-  }
+  expect_failures = [cloudflare_zero_trust_access_policy.enroll]
 }
 
 run "keeps_its_own_catch_all_on_later_applies" {

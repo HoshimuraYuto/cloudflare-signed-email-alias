@@ -74,6 +74,10 @@ export function readSettings(env: NodeJS.ProcessEnv, command: Command): Settings
 
 function missingVariables(env: NodeJS.ProcessEnv, command: Command): string[] {
   const missing: string[] = REQUIRED[command].filter((name) => (env[name] ?? "") === "");
+  const enrolling = env["MANAGE_DEVICE_ENROLLMENT"] === "true";
+  if (command === "deploy" && enrolling && splitList(env["ENROLL_EMAILS"]).length === 0) {
+    missing.push("ENROLL_EMAILS");
+  }
   return missing.length > 0 ? [`Set these environment variables: ${missing.join(", ")}`] : [];
 }
 

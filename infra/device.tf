@@ -88,18 +88,19 @@ resource "cloudflare_zero_trust_device_settings" "gateway_proxy" {
   }
 }
 
-# No addresses closes enrollment: registered devices stay connected, new ones cannot enroll.
 resource "cloudflare_zero_trust_access_policy" "enroll" {
-  count = var.manage_device_enrollment && length(var.enroll_emails) > 0 ? 1 : 0
+  count = var.manage_device_enrollment ? 1 : 0
 
   account_id = var.account_id
   name       = "${local.worker_name}-enroll"
   decision   = "allow"
   include    = [for email in var.enroll_emails : { email = { email = email } }]
 
-  # The API refuses to delete a policy an application still lists; this detaches it first.
   lifecycle {
-    create_before_destroy = true
+    precondition {
+      condition     = var.release_device_enrollment || length(var.enroll_emails) > 0
+      error_message = "Set enroll_emails to the addresses allowed to enroll devices."
+    }
   }
 }
 
