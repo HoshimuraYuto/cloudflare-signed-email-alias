@@ -1,7 +1,7 @@
 resource "cloudflare_email_routing_dns" "alias" {
-  for_each = data.cloudflare_zone.alias
+  for_each = local.zone_ids
 
-  zone_id = each.value.id
+  zone_id = each.value
 }
 
 # Destination addresses belong to the account, so two domains may share one inbox.
@@ -13,9 +13,9 @@ resource "cloudflare_email_routing_address" "destination" {
 }
 
 data "cloudflare_email_routing_catch_all" "current" {
-  for_each = data.cloudflare_zone.alias
+  for_each = local.zone_ids
 
-  zone_id = each.value.id
+  zone_id = each.value
 }
 
 locals {
@@ -29,9 +29,9 @@ locals {
 
 # Catch-all rules exist only on a zone apex, which is why each zone must be dedicated to aliases.
 resource "cloudflare_email_routing_catch_all" "alias" {
-  for_each = data.cloudflare_zone.alias
+  for_each = local.zone_ids
 
-  zone_id  = each.value.id
+  zone_id  = each.value
   name     = local.worker_name
   enabled  = true
   matchers = [{ type = "all" }]
