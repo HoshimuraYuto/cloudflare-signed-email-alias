@@ -31,7 +31,7 @@ export interface Settings {
   manageGatewayProxy: boolean;
   manageDeviceEnrollment: boolean;
   enrollEmails: string[];
-  /** Whether destroy also removes the account-wide settings and the DMARC record. */
+  /** Whether destroy also undoes the account-wide settings and the DMARC record. */
   resetSharedSettings: boolean;
 }
 
@@ -87,8 +87,14 @@ export function tofuEnv(settings: Settings): Record<string, string> {
  * Destroy keeps them unless RESET_SHARED_SETTINGS is true.
  */
 export const SHARED_RESOURCES = {
-  MANAGE_DEVICE_PROFILE: ["cloudflare_zero_trust_device_default_profile.split_tunnel"],
-  MANAGE_GATEWAY_PROXY: ["cloudflare_zero_trust_device_settings.gateway_proxy"],
+  MANAGE_DEVICE_PROFILE: [
+    "cloudflare_zero_trust_device_default_profile.split_tunnel",
+    "terraform_data.split_tunnel_original",
+  ],
+  MANAGE_GATEWAY_PROXY: [
+    "cloudflare_zero_trust_device_settings.gateway_proxy",
+    "terraform_data.gateway_proxy_original",
+  ],
   MANAGE_DEVICE_ENROLLMENT: [
     "cloudflare_zero_trust_access_application.enroll",
     "cloudflare_zero_trust_access_policy.enroll",

@@ -165,7 +165,10 @@ pnpm run destroy
 It uses the same environment variables except `SIGNING_KEY` and `ENROLL_EMAILS`, asks you to type every alias
 domain, then removes the Worker and everything deployment created for this project. The
 account-wide settings and the DMARC record stay, because other projects may use them; set
-`RESET_SHARED_SETTINGS=true` to remove them too and restore the default split tunnel. It
+`RESET_SHARED_SETTINGS=true` to undo them too. The split tunnel and the Gateway proxy
+then go back to the values recorded when deployment first managed them, and only this
+project's policy is removed from the device enrollment permissions, whose application
+stays. If the recorded split tunnel equals this project's hosts, set it back yourself. It
 prints the few things you remove yourself.
 
 ## Development

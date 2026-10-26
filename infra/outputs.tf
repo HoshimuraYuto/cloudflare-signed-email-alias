@@ -20,3 +20,11 @@ output "service_token" {
   }
   sensitive = true
 }
+
+output "shared_originals" {
+  description = "Account-wide settings as they were before this project changed them; destroy restores these."
+  value = {
+    split_tunnel  = try(terraform_data.split_tunnel_original[0].output, null)
+    gateway_proxy = try(terraform_data.gateway_proxy_original[0].output, null)
+  }
+}

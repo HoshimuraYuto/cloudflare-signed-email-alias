@@ -9,29 +9,15 @@ import {
   WORKER_NAME,
   type Settings,
 } from "./settings.mts";
-import { initTofu, stateResources, tofu } from "./tofu.mts";
+import { initTofu, stateResources, tofu, tofuOutput } from "./tofu.mts";
 
-/**
- * Split tunnel entries Cloudflare recommends for a new organization, from
- * developers.cloudflare.com/cloudflare-one/.../split-tunnels/ (Add a route).
- */
-export const DEFAULT_SPLIT_TUNNEL_EXCLUDE = [
-  { address: "ff05::/16" },
-  { address: "ff04::/16" },
-  { address: "ff03::/16" },
-  { address: "ff02::/16" },
-  { address: "ff01::/16" },
-  { address: "fe80::/10", description: "IPv6 Link Local" },
-  { address: "fd00::/8" },
-  { address: "255.255.255.255/32", description: "DHCP Broadcast" },
-  { address: "240.0.0.0/4" },
-  { address: "224.0.0.0/24" },
-  { address: "192.168.0.0/16" },
-  { address: "192.0.0.0/24" },
-  { address: "172.16.0.0/12" },
-  { address: "169.254.0.0/16", description: "DHCP Unspecified" },
-  { address: "100.64.0.0/10" },
-  { address: "10.0.0.0/8" },
+const ENROLL_APP = SHARED_RESOURCES.MANAGE_DEVICE_ENROLLMENT[0];
+
+/** Put back or released before destroy, so OpenTofu must not destroy them afterwards. */
+const LET_GO = [
+  ENROLL_APP,
+  ...SHARED_RESOURCES.MANAGE_DEVICE_PROFILE,
+  ...SHARED_RESOURCES.MANAGE_GATEWAY_PROXY,
 ];
 
 const LEFT_FOR_YOU = `Remove these by hand; they were created outside this project:
@@ -44,23 +30,54 @@ const settings = readSettings(process.env);
 await confirm(settings);
 await initTofu(settings);
 const recorded = await stateResources(settings);
-const shared = Object.values(SHARED_RESOURCES).flat();
+if (settings.resetSharedSettings) {
+  await resetSharedSettings(settings, recorded);
+}
 await tofu(settings, [
   "destroy",
-  ...(settings.resetSharedSettings ? [] : shared.map((name) => `-exclude=${name}`)),
+  ...(settings.resetSharedSettings
+    ? []
+    : Object.values(SHARED_RESOURCES)
+        .flat()
+        .map((name) => `-exclude=${name}`)),
 ]);
 for (const domain of settings.forwarding.keys()) {
   await disableCatchAll(domain);
 }
-// Decided by the state, not the flag: a later run may have the flag off.
-if (
-  settings.resetSharedSettings &&
-  isRecorded(recorded, SHARED_RESOURCES.MANAGE_DEVICE_PROFILE[0])
-) {
-  await restoreSplitTunnel();
-}
 await run("pnpm", ["exec", "cf", "workers", "delete", WORKER_NAME, "--force"]);
 console.log(LEFT_FOR_YOU);
+
+/**
+ * Puts the account-wide settings back before anything is destroyed, so a failure leaves the
+ * recorded originals in the state for a second run. Destroying these resources would not
+ * restore them: the provider deletes the enrollment application, resets every device setting,
+ * and leaves the default profile as it is. So they are let go of from the state instead.
+ */
+async function resetSharedSettings(current: Settings, inState: string[]): Promise<void> {
+  // Only the state says what earlier deployments managed; the flags may be off by now.
+  const originals = await tofuOutput(current, "shared_originals");
+  if (isRecorded(inState, ENROLL_APP)) {
+    await tofu(current, [
+      "apply",
+      "-auto-approve",
+      `-target=${ENROLL_APP}`,
+      "-var=manage_device_enrollment=true",
+      "-var=release_device_enrollment=true",
+    ]);
+  }
+  if (isRecord(originals?.["split_tunnel"])) {
+    const warpInclude = await tofuOutput(current, "warp_include", true);
+    await restoreSplitTunnel(originals["split_tunnel"], warpInclude);
+  }
+  if (isRecord(originals?.["gateway_proxy"])) {
+    await restoreGatewayProxy(originals["gateway_proxy"]);
+  }
+  const letGo = LET_GO.filter((name) => isRecorded(inState, name));
+  if (letGo.length > 0) {
+    // Without -backup, the backup lands in infra/, inside the repository.
+    await tofu(current, ["state", "rm", `-backup=${current.stateFile}.backup`, ...letGo]);
+  }
+}
 
 /** Mail to every alias stops for good, so every alias domain must be typed back. */
 async function confirm(current: Settings): Promise<void> {
@@ -95,8 +112,20 @@ async function disableCatchAll(domain: string): Promise<void> {
   ]);
 }
 
-// The provider leaves the default profile as it is on destroy.
-async function restoreSplitTunnel(): Promise<void> {
+// Setting one list also sets the mode, so the list that was in use goes back.
+async function restoreSplitTunnel(
+  original: Record<string, unknown>,
+  warpInclude: unknown,
+): Promise<void> {
+  const include = withoutNulls(original["include"]);
+  if (include.length > 0 && sameHosts(include, warpInclude)) {
+    console.warn(
+      "The recorded split tunnel is this project's own; set the split tunnel back by hand.",
+    );
+    return;
+  }
+  const [mode, entries] =
+    include.length > 0 ? ["--include", include] : ["--exclude", withoutNulls(original["exclude"])];
   await run("pnpm", [
     "exec",
     "cf",
@@ -105,7 +134,43 @@ async function restoreSplitTunnel(): Promise<void> {
     "profiles",
     "default",
     "update",
-    "--exclude",
-    JSON.stringify(DEFAULT_SPLIT_TUNNEL_EXCLUDE),
+    mode,
+    JSON.stringify(entries),
   ]);
+}
+
+async function restoreGatewayProxy(original: Record<string, unknown>): Promise<void> {
+  await run("pnpm", [
+    "exec",
+    "cf",
+    "zero-trust",
+    "devices",
+    "settings",
+    "update",
+    `--gateway-proxy-enabled=${String(original["gateway_proxy_enabled"] === true)}`,
+    `--gateway-udp-proxy-enabled=${String(original["gateway_udp_proxy_enabled"] === true)}`,
+  ]);
+}
+
+/** Split tunnel entries with the attributes the API left unset dropped. */
+function withoutNulls(entries: unknown): Record<string, unknown>[] {
+  return (Array.isArray(entries) ? entries : [])
+    .filter(isRecord)
+    .map((entry) =>
+      Object.fromEntries(Object.entries(entry).filter(([, value]) => value !== null)),
+    );
+}
+
+function sameHosts(entries: Record<string, unknown>[], warpInclude: unknown): boolean {
+  const ours = hostsOf(Array.isArray(warpInclude) ? warpInclude : []);
+  const theirs = hostsOf(entries);
+  return theirs.size === ours.size && [...theirs].every((host) => ours.has(host));
+}
+
+function hostsOf(list: unknown[]): Set<string> {
+  return new Set(list.filter(isRecord).map((entry) => String(entry["host"] ?? entry["address"])));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

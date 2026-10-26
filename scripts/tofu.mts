@@ -34,17 +34,26 @@ export async function stateResources(settings: Settings): Promise<string[]> {
 export async function tofuOutput(
   settings: Settings,
   name: string,
-): Promise<Record<string, unknown> | undefined> {
+): Promise<Record<string, unknown> | undefined>;
+export async function tofuOutput(settings: Settings, name: string, list: true): Promise<unknown[]>;
+export async function tofuOutput(
+  settings: Settings,
+  name: string,
+  list?: true,
+): Promise<Record<string, unknown> | unknown[] | undefined> {
   const json = await run("tofu", ["-chdir=infra", "output", "-json"], {
     env: tofuEnv(settings),
     capture: true,
   });
   const outputs: unknown = JSON.parse(json);
   if (!isRecord(outputs) || !isRecord(outputs[name])) {
-    return undefined;
+    return list ? [] : undefined;
   }
   const value = outputs[name]["value"];
-  return isRecord(value) ? value : undefined;
+  if (list) {
+    return Array.isArray(value) ? value : [];
+  }
+  return isRecord(value) && !Array.isArray(value) ? value : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

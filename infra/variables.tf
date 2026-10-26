@@ -63,6 +63,12 @@ variable "dmarc_policy" {
   }
 }
 
+variable "release_device_enrollment" {
+  description = "Detach this project's policy from the enrollment application; set by destroy."
+  type        = bool
+  default     = false
+}
+
 variable "enroll_emails" {
   description = "Addresses that may enroll devices when manage_device_enrollment is true."
   type        = list(string)

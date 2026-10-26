@@ -7,17 +7,52 @@ locals {
 
 # The default profile, the device settings and the enrollment application exist once per
 # account, so other projects may rely on them; all are managed only on request.
+data "cloudflare_zero_trust_device_default_profile" "current" {
+  count = var.manage_device_profile ? 1 : 0
+
+  account_id = var.account_id
+}
+
+# Kept from the first apply on, so destroy can put back what was there before this project.
+resource "terraform_data" "split_tunnel_original" {
+  count = var.manage_device_profile ? 1 : 0
+
+  input = {
+    include = data.cloudflare_zero_trust_device_default_profile.current[0].include
+    exclude = data.cloudflare_zero_trust_device_default_profile.current[0].exclude
+  }
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
 resource "cloudflare_zero_trust_device_default_profile" "split_tunnel" {
   count = var.manage_device_profile ? 1 : 0
 
   account_id = var.account_id
   include    = local.warp_include
+
+  depends_on = [terraform_data.split_tunnel_original]
 }
 
 data "cloudflare_zero_trust_device_settings" "current" {
   count = var.manage_gateway_proxy ? 1 : 0
 
   account_id = var.account_id
+}
+
+resource "terraform_data" "gateway_proxy_original" {
+  count = var.manage_gateway_proxy ? 1 : 0
+
+  input = {
+    gateway_proxy_enabled     = data.cloudflare_zero_trust_device_settings.current[0].gateway_proxy_enabled
+    gateway_udp_proxy_enabled = data.cloudflare_zero_trust_device_settings.current[0].gateway_udp_proxy_enabled
+  }
+
+  lifecycle {
+    ignore_changes = [input]
+  }
 }
 
 # The device posture check passes only for traffic the Gateway proxies.
@@ -35,6 +70,8 @@ resource "cloudflare_zero_trust_device_settings" "gateway_proxy" {
   external_emergency_signal_url         = data.cloudflare_zero_trust_device_settings.current[0].external_emergency_signal_url
   root_certificate_installation_enabled = data.cloudflare_zero_trust_device_settings.current[0].root_certificate_installation_enabled
   use_zt_virtual_ip                     = data.cloudflare_zero_trust_device_settings.current[0].use_zt_virtual_ip
+
+  depends_on = [terraform_data.gateway_proxy_original]
 
   lifecycle {
     # The provider updates with PUT; fixed after creation so later applies send only the proxy.
@@ -61,7 +98,7 @@ resource "cloudflare_zero_trust_access_policy" "enroll" {
 
   lifecycle {
     precondition {
-      condition     = length(var.enroll_emails) > 0
+      condition     = var.release_device_enrollment || length(var.enroll_emails) > 0
       error_message = "Set enroll_emails to the addresses allowed to enroll devices."
     }
   }
@@ -96,5 +133,6 @@ resource "cloudflare_zero_trust_access_application" "enroll" {
   # Copied so that adopting the application changes only its policies.
   allowed_idps              = try(local.existing_enroll_app.allowed_idps, null)
   auto_redirect_to_identity = try(local.existing_enroll_app.auto_redirect_to_identity, null)
-  policies                  = [{ id = cloudflare_zero_trust_access_policy.enroll[0].id, precedence = 1 }]
+  # Destroy with RESET_SHARED_SETTINGS empties this before letting go of the application.
+  policies = var.release_device_enrollment ? [] : [{ id = cloudflare_zero_trust_access_policy.enroll[0].id, precedence = 1 }]
 }

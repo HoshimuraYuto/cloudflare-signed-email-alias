@@ -11,9 +11,23 @@ export const APPLIED_ACCESS = {
 
 export const SERVICE_TOKEN = { client_id: "client.access", client_secret: "client-secret" };
 
+export const SHARED_ORIGINALS = {
+  split_tunnel: {
+    include: null,
+    exclude: [{ address: "10.0.0.0/8", description: null, host: null }],
+  },
+  gateway_proxy: { gateway_proxy_enabled: false, gateway_udp_proxy_enabled: true },
+};
+
+const WARP_INCLUDE = [
+  { host: "email-alias-api.example.com" },
+  { host: "team.cloudflareaccess.com" },
+];
+
 const ACCESS_OUTPUT = JSON.stringify({
   worker_secrets: { value: APPLIED_ACCESS },
   service_token: { value: SERVICE_TOKEN },
+  warp_include: { value: WARP_INCLUDE },
 });
 
 // Each fake logs "<command line>\t<stdin>"; tofu answers `output` from a marker that `apply` creates.
@@ -22,13 +36,23 @@ printf '%s\\t\\n' "tofu $*" >>"$CALLS"
 case "$*" in
   *" init"*) echo "OpenTofu has been successfully initialized!" ;;
   *" apply"*) touch "$APPLIED" ;;
-  *" output "*) if [ -f "$APPLIED" ]; then echo '${ACCESS_OUTPUT}'; else echo '{}'; fi ;;
+  *" output "*)
+    if [ -f "$APPLIED" ]; then echo '${ACCESS_OUTPUT}'
+    elif [ -f "$STATE_LIST" ]; then cat "$ORIGINALS"
+    else echo '{}'; fi ;;
   *" state list"*) cat "$STATE_LIST" ;;
 esac
 `;
 const FAKE_PNPM = `#!/bin/sh
 printf '%s\\t%s\\n' "pnpm $*" "$(cat)" >>"$CALLS"
 `;
+
+function originalsOutput(originals: unknown): string {
+  return JSON.stringify({
+    shared_originals: { value: originals },
+    warp_include: { value: WARP_INCLUDE },
+  });
+}
 
 export interface Call {
   command: string;
@@ -41,9 +65,12 @@ export interface FakeCli {
   runCapturing: (
     script: string,
     env: Record<string, string>,
+    input?: string,
   ) => { status: number | null; stdout: string; stderr: string };
   /** Makes the state file exist and hold these resource addresses. */
   recordState: (resources: string[]) => Promise<void>;
+  /** Replaces the shared_originals output the state reports. */
+  setOriginals: (originals: unknown) => Promise<void>;
   calls: () => Promise<Call[]>;
   forgetCalls: () => Promise<void>;
   remove: () => Promise<void>;
@@ -69,19 +96,24 @@ export async function createFakeCli(): Promise<FakeCli> {
         APPLIED: join(dir, "applied"),
         STATE_FILE: join(dir, "terraform.tfstate"),
         STATE_LIST: join(dir, "state-list"),
+        ORIGINALS: join(dir, "originals.json"),
         ...env,
       },
     });
 
   return {
     run: (script, env, input) => spawnScript(script, env, input).status,
-    runCapturing: (script, env) => {
-      const { status, stdout, stderr } = spawnScript(script, env);
+    runCapturing: (script, env, input) => {
+      const { status, stdout, stderr } = spawnScript(script, env, input);
       return { status, stdout, stderr };
     },
     recordState: async (resources) => {
       await writeFile(join(dir, "terraform.tfstate"), "");
       await writeFile(join(dir, "state-list"), resources.map((name) => `${name}\n`).join(""));
+      await writeFile(join(dir, "originals.json"), originalsOutput(SHARED_ORIGINALS));
+    },
+    setOriginals: async (originals) => {
+      await writeFile(join(dir, "originals.json"), originalsOutput(originals));
     },
     calls: async () => {
       const text = await readFile(log, "utf8").catch(() => "");

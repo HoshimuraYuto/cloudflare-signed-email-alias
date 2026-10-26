@@ -26,6 +26,13 @@ mock_provider "cloudflare" {
     defaults = { result = [] }
   }
 
+  mock_data "cloudflare_zero_trust_device_default_profile" {
+    defaults = {
+      include = null
+      exclude = [{ address = "10.0.0.0/8", description = null, host = null }]
+    }
+  }
+
   mock_data "cloudflare_zero_trust_device_settings" {
     defaults = { gateway_proxy_enabled = false, gateway_udp_proxy_enabled = true, use_zt_virtual_ip = true }
   }
@@ -100,6 +107,11 @@ run "manages_the_device_profile_on_request" {
   }
 
   assert {
+    condition     = terraform_data.split_tunnel_original[0].input.exclude[0].address == "10.0.0.0/8"
+    error_message = "The split tunnel from before this project must be kept for destroy."
+  }
+
+  assert {
     condition     = toset([for entry in cloudflare_zero_trust_device_default_profile.split_tunnel[0].include : entry.host]) == toset(["email-alias-api.example.com", "team.cloudflareaccess.com"])
     error_message = "The split tunnel must include the API and the team domain."
   }
@@ -138,6 +150,21 @@ run "manages_device_enrollment_on_request" {
   assert {
     condition     = cloudflare_zero_trust_access_policy.enroll[0].decision == "allow" && toset([for rule in cloudflare_zero_trust_access_policy.enroll[0].include : rule.email.email]) == toset(["me@example.net"])
     error_message = "Only the listed addresses may enroll devices."
+  }
+}
+
+run "detaches_its_policy_when_releasing_enrollment" {
+  command = plan
+
+  # No addresses: destroy does not need ENROLL_EMAILS.
+  variables {
+    manage_device_enrollment  = true
+    release_device_enrollment = true
+  }
+
+  assert {
+    condition     = length(cloudflare_zero_trust_access_application.enroll[0].policies) == 0
+    error_message = "Releasing must leave the application without this project's policy."
   }
 }
 
@@ -391,7 +418,7 @@ run "leaves_the_gateway_proxy_alone_by_default" {
   command = plan
 
   assert {
-    condition     = length(cloudflare_zero_trust_device_settings.gateway_proxy) == 0
+    condition     = length(cloudflare_zero_trust_device_settings.gateway_proxy) == 0 && length(terraform_data.gateway_proxy_original) == 0
     error_message = "The account's device settings must not be touched unless asked."
   }
 }
@@ -410,5 +437,9 @@ run "turns_on_the_gateway_proxy_on_request" {
   assert {
     condition     = cloudflare_zero_trust_device_settings.gateway_proxy[0].gateway_udp_proxy_enabled == true && cloudflare_zero_trust_device_settings.gateway_proxy[0].use_zt_virtual_ip == true
     error_message = "Every other device setting must stay as it was."
+  }
+  assert {
+    condition     = terraform_data.gateway_proxy_original[0].input.gateway_proxy_enabled == false
+    error_message = "The proxy setting from before this project must be kept for destroy."
   }
 }
