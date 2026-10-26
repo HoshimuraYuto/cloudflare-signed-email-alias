@@ -1,10 +1,13 @@
 import { existsSync } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { chmod, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { isRecord } from "./json.mts";
 import { run } from "./run.mts";
 import { tofuEnv, type Settings } from "./settings.mts";
+
+/** The state holds the service token, so only the owner may read the directory. */
+const STATE_DIRECTORY_MODE = 0o700;
 
 /**
  * Passed through the environment rather than written in infra/: an editor's language server
@@ -43,7 +46,10 @@ async function tofuCapturing(settings: Settings, args: string[]): Promise<string
 }
 
 export async function initTofu(settings: Settings): Promise<void> {
-  await mkdir(dirname(settings.stateFile), { recursive: true });
+  const directory = dirname(settings.stateFile);
+  await mkdir(directory, { recursive: true });
+  // Also for a directory made before, which mkdir leaves as it is.
+  await chmod(directory, STATE_DIRECTORY_MODE);
   await tofu(settings, [
     "init",
     "-input=false",
