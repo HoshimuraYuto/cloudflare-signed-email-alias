@@ -131,8 +131,8 @@ already use them. Deployment changes them only when you set the variable to `tru
 - `MANAGE_DEVICE_PROFILE` replaces the split tunnel: a profile that excluded hosts now
   sends only this project's hosts through WARP. Leave it unset if other traffic must go
   through WARP.
-- `DMARC_POLICY` stops if a domain already has a DMARC record. `reject` suits domains that
-  send no mail.
+- `DMARC_POLICY` stops if a domain already has a DMARC record. Set it to `reject` unless
+  the domain also sends mail: others then cannot send mail in the domain's name.
 - Once a deployment has managed one of these, keep its variable set: applying without it
   would delete the setting, so deployment refuses to run.
 
