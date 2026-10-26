@@ -96,6 +96,11 @@ resource "cloudflare_zero_trust_access_policy" "enroll" {
   name       = "${local.worker_name}-enroll"
   decision   = "allow"
   include    = [for email in var.enroll_emails : { email = { email = email } }]
+
+  # The API refuses to delete a policy an application still lists; this detaches it first.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 data "cloudflare_zero_trust_access_applications" "all" {
