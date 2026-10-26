@@ -153,7 +153,27 @@ run "manages_device_enrollment_on_request" {
   }
 }
 
-run "detaches_its_policy_when_releasing_enrollment" {
+run "adds_its_policy_after_the_recorded_ones" {
+  command = plan
+
+  variables {
+    manage_device_enrollment = true
+    enroll_emails            = ["me@example.net"]
+  }
+
+  # Stands in for an existing application: mock providers cannot run the import.
+  override_resource {
+    target = terraform_data.enrollment_original[0]
+    values = { output = [{ id = "theirs-1", precedence = 1 }, { id = "theirs-2", precedence = 2 }] }
+  }
+
+  assert {
+    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : policy.precedence] == [1, 2, 3] && [for policy in slice(cloudflare_zero_trust_access_application.enroll[0].policies, 0, 2) : policy.id] == ["theirs-1", "theirs-2"]
+    error_message = "The existing enrollment policies must stay, ahead of this project's."
+  }
+}
+
+run "puts_the_recorded_policies_back_when_releasing_enrollment" {
   command = plan
 
   # No addresses: destroy does not need ENROLL_EMAILS.
@@ -162,9 +182,15 @@ run "detaches_its_policy_when_releasing_enrollment" {
     release_device_enrollment = true
   }
 
+  # Stands in for an existing application: mock providers cannot run the import.
+  override_resource {
+    target = terraform_data.enrollment_original[0]
+    values = { output = [{ id = "theirs-1", precedence = 1 }, { id = "theirs-2", precedence = 2 }] }
+  }
+
   assert {
-    condition     = length(cloudflare_zero_trust_access_application.enroll[0].policies) == 0
-    error_message = "Releasing must leave the application without this project's policy."
+    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : "${policy.id}:${policy.precedence}"] == ["theirs-1:1", "theirs-2:2"]
+    error_message = "Releasing must leave exactly the policies the application had before."
   }
 }
 

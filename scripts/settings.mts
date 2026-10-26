@@ -99,6 +99,7 @@ export const SHARED_RESOURCES = {
   MANAGE_DEVICE_ENROLLMENT: [
     "cloudflare_zero_trust_access_application.enroll",
     "cloudflare_zero_trust_access_policy.enroll",
+    "terraform_data.enrollment_original",
   ],
   DMARC_POLICY: ["cloudflare_dns_record.dmarc"],
 } as const;

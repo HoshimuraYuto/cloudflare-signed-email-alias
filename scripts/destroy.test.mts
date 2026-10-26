@@ -72,6 +72,7 @@ describe("destroy", () => {
       "-exclude=terraform_data.gateway_proxy_original",
       "-exclude=cloudflare_zero_trust_access_application.enroll",
       "-exclude=cloudflare_zero_trust_access_policy.enroll",
+      "-exclude=terraform_data.enrollment_original",
       "-exclude=cloudflare_dns_record.dmarc",
     ]);
     expect(ran.some((command) => command.includes("profiles default update"))).toBe(false);

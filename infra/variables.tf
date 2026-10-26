@@ -47,7 +47,7 @@ variable "manage_gateway_proxy" {
 }
 
 variable "manage_device_enrollment" {
-  description = "Replace the account's device enrollment permissions with a policy allowing enroll_emails."
+  description = "Add a policy allowing enroll_emails to the account's device enrollment permissions."
   type        = bool
   default     = false
 }
@@ -64,7 +64,7 @@ variable "dmarc_policy" {
 }
 
 variable "release_device_enrollment" {
-  description = "Detach this project's policy from the enrollment application; set by destroy."
+  description = "Put the enrollment application's policies back as recorded; set by destroy."
   type        = bool
   default     = false
 }

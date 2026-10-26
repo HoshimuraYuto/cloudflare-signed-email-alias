@@ -118,6 +118,27 @@ locals {
   ])
 }
 
+resource "terraform_data" "enrollment_original" {
+  count = var.manage_device_enrollment ? 1 : 0
+
+  input = [
+    for policy in coalesce(try(local.existing_enroll_app.policies, null), []) :
+    { id = policy.id, precedence = policy.precedence }
+  ]
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
+locals {
+  enroll_originals = try(terraform_data.enrollment_original[0].output, [])
+  enroll_policies = concat(local.enroll_originals, [{
+    id         = try(cloudflare_zero_trust_access_policy.enroll[0].id, null)
+    precedence = max(0, [for policy in local.enroll_originals : policy.precedence]...) + 1
+  }])
+}
+
 import {
   for_each = toset([for app in local.existing_enroll_app == null ? [] : [local.existing_enroll_app] : tostring(app.id)])
 
@@ -133,6 +154,5 @@ resource "cloudflare_zero_trust_access_application" "enroll" {
   # Copied so that adopting the application changes only its policies.
   allowed_idps              = try(local.existing_enroll_app.allowed_idps, null)
   auto_redirect_to_identity = try(local.existing_enroll_app.auto_redirect_to_identity, null)
-  # Destroy with RESET_SHARED_SETTINGS empties this before letting go of the application.
-  policies = var.release_device_enrollment ? [] : [{ id = cloudflare_zero_trust_access_policy.enroll[0].id, precedence = 1 }]
+  policies                  = var.release_device_enrollment ? local.enroll_originals : local.enroll_policies
 }
