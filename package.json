@@ -7,8 +7,6 @@
     "fix": "oxfmt . && oxlint --type-aware --fix && tofu -chdir=infra fmt -recursive",
     "infra:check": "tofu -chdir=infra fmt -check -recursive && tofu -chdir=infra validate && tofu -chdir=infra test",
     "prepare": "lefthook install",
-    "types": "cf workers types",
-    "build": "cf build",
     "deploy": "node scripts/deploy.mts",
     "destroy": "node scripts/destroy.mts",
     "service-token": "node scripts/service-token.mts",
