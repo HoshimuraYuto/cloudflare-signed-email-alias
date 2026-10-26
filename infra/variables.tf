@@ -70,7 +70,7 @@ variable "release_device_enrollment" {
 }
 
 variable "enroll_emails" {
-  description = "Addresses that may enroll devices when manage_device_enrollment is true."
+  description = "Addresses that may enroll devices when manage_device_enrollment is true; empty closes enrollment."
   type        = list(string)
   default     = []
 }

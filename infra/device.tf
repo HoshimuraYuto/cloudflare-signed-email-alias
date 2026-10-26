@@ -88,20 +88,14 @@ resource "cloudflare_zero_trust_device_settings" "gateway_proxy" {
   }
 }
 
+# No addresses closes enrollment: registered devices stay connected, new ones cannot enroll.
 resource "cloudflare_zero_trust_access_policy" "enroll" {
-  count = var.manage_device_enrollment ? 1 : 0
+  count = var.manage_device_enrollment && length(var.enroll_emails) > 0 ? 1 : 0
 
   account_id = var.account_id
   name       = "${local.worker_name}-enroll"
   decision   = "allow"
   include    = [for email in var.enroll_emails : { email = { email = email } }]
-
-  lifecycle {
-    precondition {
-      condition     = var.release_device_enrollment || length(var.enroll_emails) > 0
-      error_message = "Set enroll_emails to the addresses allowed to enroll devices."
-    }
-  }
 }
 
 data "cloudflare_zero_trust_access_applications" "all" {
@@ -133,10 +127,12 @@ resource "terraform_data" "enrollment_original" {
 
 locals {
   enroll_originals = try(terraform_data.enrollment_original[0].output, [])
-  enroll_policies = concat(local.enroll_originals, [{
-    id         = try(cloudflare_zero_trust_access_policy.enroll[0].id, null)
-    precedence = max(0, [for policy in local.enroll_originals : policy.precedence]...) + 1
-  }])
+  enroll_policies = concat(local.enroll_originals, [
+    for policy in cloudflare_zero_trust_access_policy.enroll : {
+      id         = policy.id
+      precedence = max(0, [for original in local.enroll_originals : original.precedence]...) + 1
+    }
+  ])
 }
 
 import {

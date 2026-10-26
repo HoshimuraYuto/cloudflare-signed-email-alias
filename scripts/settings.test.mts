@@ -71,10 +71,9 @@ describe("readSettings", () => {
     ).toThrow(/domain=inbox/);
   });
 
-  it("needs ENROLL_EMAILS only to deploy while it manages device enrollment", () => {
+  it("reads ENROLL_EMAILS as a list, and an empty one closes enrollment", () => {
     const enrolling = { ...COMPLETE_ENV, MANAGE_DEVICE_ENROLLMENT: "true" };
-    expect(() => readSettings(enrolling, "deploy")).toThrow(/: ENROLL_EMAILS$/);
-    expect(() => readSettings(enrolling, "destroy")).not.toThrow();
+    expect(readSettings(enrolling, "deploy").enrollEmails).toEqual([]);
     const settings = readSettings(
       { ...enrolling, ENROLL_EMAILS: " me@example.net, ,you@example.org " },
       "deploy",

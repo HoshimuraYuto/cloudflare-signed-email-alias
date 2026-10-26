@@ -194,14 +194,26 @@ run "puts_the_recorded_policies_back_when_releasing_enrollment" {
   }
 }
 
-run "refuses_to_manage_enrollment_without_addresses" {
+run "closes_enrollment_without_addresses" {
   command = plan
 
   variables {
     manage_device_enrollment = true
   }
 
-  expect_failures = [cloudflare_zero_trust_access_policy.enroll]
+  override_resource {
+    target = terraform_data.enrollment_original[0]
+    values = { output = [{ id = "theirs-1", precedence = 1 }] }
+  }
+
+  assert {
+    condition     = length(cloudflare_zero_trust_access_policy.enroll) == 0
+    error_message = "Without addresses this project must not allow anyone to enroll."
+  }
+  assert {
+    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : policy.id] == ["theirs-1"]
+    error_message = "Closing enrollment must leave only the policies the application had before."
+  }
 }
 
 run "keeps_its_own_catch_all_on_later_applies" {
