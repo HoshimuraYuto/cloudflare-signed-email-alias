@@ -1,5 +1,11 @@
 import { spawn } from "node:child_process";
 
+/**
+ * Kept out of every child's environment, so a compromised CLI or provider plugin cannot read
+ * them there. Children that need one get it over stdin or as a TF_VAR_.
+ */
+const WITHHELD = ["SIGNING_KEY", "STATE_PASSPHRASE", "FORWARD_TO", "ENROLL_EMAILS"];
+
 interface RunOptions {
   env?: Record<string, string>;
   /** Written to the child's stdin, so secrets never appear in its arguments. */
@@ -17,8 +23,11 @@ export async function run(
   args: string[],
   options: RunOptions = {},
 ): Promise<string> {
+  const inherited = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !WITHHELD.includes(name)),
+  );
   const child = spawn(command, args, {
-    env: { ...process.env, ...options.env },
+    env: { ...inherited, ...options.env },
     stdio: [
       options.input === undefined ? "inherit" : "pipe",
       options.capture ? "pipe" : process.stderr,

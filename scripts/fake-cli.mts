@@ -32,11 +32,17 @@ const ACCESS_OUTPUT = JSON.stringify({
   warp_include: { value: WARP_INCLUDE },
 });
 
+/** Appends to $LEAKS the name of every withheld variable the fake finds in its environment. */
+const REPORT_LEAKS = `for name in SIGNING_KEY STATE_PASSPHRASE FORWARD_TO ENROLL_EMAILS; do
+  env | grep -q "^$name=" && echo "$name" >>"$LEAKS"
+done
+`;
+
 // Each fake logs "<command line>\t<stdin>"; tofu answers `output` from a marker that `apply` creates.
 const FAKE_TOFU = `#!/bin/sh
 printf '%s\\t\\n' "tofu $*" >>"$CALLS"
 printf '%s\\t%s\\n' "\${TF_ENCRYPTION:+set}" "\${TF_DATA_DIR:-}" >>"$TOFU_ENV"
-case "$*" in
+${REPORT_LEAKS}case "$*" in
   *" init"*) echo "OpenTofu has been successfully initialized!" ;;
   *" apply"*) touch "$APPLIED" ;;
   *" output "*)
@@ -47,7 +53,7 @@ case "$*" in
 esac
 `;
 const FAKE_PNPM = `#!/bin/sh
-printf '%s\\t%s\\n' "pnpm $*" "$(cat)" >>"$CALLS"
+${REPORT_LEAKS}printf '%s\\t%s\\n' "pnpm $*" "$(cat)" >>"$CALLS"
 `;
 
 function originalsOutput(originals: unknown): string {
@@ -77,6 +83,8 @@ export interface FakeCli {
   calls: () => Promise<Call[]>;
   /** For every tofu run: whether TF_ENCRYPTION was set, and TF_DATA_DIR. */
   tofuEnvironments: () => Promise<{ encryption: boolean; dataDir: string }[]>;
+  /** Withheld variables that reached a fake, which must stay empty. */
+  leakedSecrets: () => Promise<string[]>;
   forgetCalls: () => Promise<void>;
   remove: () => Promise<void>;
 }
@@ -99,6 +107,7 @@ export async function createFakeCli(): Promise<FakeCli> {
         PATH: `${dir}:${process.env["PATH"] ?? ""}`,
         CALLS: log,
         TOFU_ENV: join(dir, "tofu-env.log"),
+        LEAKS: join(dir, "leaks.log"),
         APPLIED: join(dir, "applied"),
         STATE_FILE: join(dir, "terraform.tfstate"),
         STATE_LIST: join(dir, "state-list"),
@@ -140,6 +149,10 @@ export async function createFakeCli(): Promise<FakeCli> {
           const [encryption = "", dataDir = ""] = line.split("\t");
           return { encryption: encryption === "set", dataDir };
         });
+    },
+    leakedSecrets: async () => {
+      const text = await readFile(join(dir, "leaks.log"), "utf8").catch(() => "");
+      return [...new Set(text.split("\n").filter((line) => line !== ""))];
     },
     forgetCalls: async () => {
       await rm(log, { force: true });

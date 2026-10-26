@@ -51,6 +51,12 @@ describe("deploy", () => {
     expect(await deployedSecrets()).toEqual([workerSecrets(APPLIED_ACCESS)]);
   });
 
+  it("keeps the Worker's secrets out of the environment of every command it runs", async () => {
+    fake.current.run("deploy.mts", COMPLETE_ENV);
+
+    expect(await fake.current.leakedSecrets()).toEqual([]);
+  });
+
   it("passes secrets on stdin, never as arguments", async () => {
     fake.current.run("deploy.mts", COMPLETE_ENV);
 
