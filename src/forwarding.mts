@@ -19,6 +19,15 @@ export function parseForwarding(text: string): Map<string, string> {
   if (forwarding.size === 0) {
     throw new Error("FORWARD_TO is not set");
   }
+  // Mail forwarded there would come back to this Worker.
+  for (const inbox of forwarding.values()) {
+    const inboxDomain = inbox.slice(inbox.lastIndexOf("@") + 1);
+    if (forwarding.has(inboxDomain)) {
+      throw new Error(
+        `FORWARD_TO sends mail to an inbox at ${inboxDomain}, which is an alias domain`,
+      );
+    }
+  }
   return forwarding;
 }
 

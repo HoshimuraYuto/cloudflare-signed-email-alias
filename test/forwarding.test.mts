@@ -38,6 +38,10 @@ describe("parseForwarding", () => {
     ["with a domain an alias cannot carry", "exa_mple.com=inbox@example.net"],
     ["with a bare name", "localhost=inbox@example.net"],
     ["listing a domain twice", "example.com=a@example.net,EXAMPLE.com=b@example.net"],
+    [
+      "sending to an inbox at an alias domain",
+      "example.com=a@example.org,example.org=b@example.net",
+    ],
   ])("throws when %s", (_case, text) => {
     expect(() => parseForwarding(text)).toThrow();
   });
