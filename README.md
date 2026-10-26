@@ -154,10 +154,18 @@ With every variable above set, three steps remain:
      inbox can enroll a device of their own and create addresses.
    - To add a device later, set `ENROLL_EMAILS` again, enroll it, then empty it.
 
-If the browser on a device uses its own secure DNS (DNS over HTTPS), set it to use the
-operating system's DNS. WARP sends a split tunnel host through the tunnel only after it
-sees the host looked up, and it cannot see lookups the browser makes itself. Until then
-the API answers 403 (Forbidden).
+If Chrome gets 403 (Forbidden) while WARP is connected, check its secure DNS in
+`chrome://settings/security`:
+
+- Turn it off, or choose a provider other than Cloudflare.
+- If the operating system's DNS is Cloudflare (`1.1.1.1`), do not choose the option that
+  uses the current provider either: Chrome then uses Cloudflare's DNS over HTTPS too.
+- Relaunch Chrome after changing the setting.
+
+WARP routes the API through the tunnel only after it sees the API looked up, and it cannot
+see lookups Chrome makes through Cloudflare's DNS over HTTPS. This mostly shows in the first
+minutes after deploying. Once addresses can be created, you can put the secure DNS setting
+back as it was.
 
 #### Settings to make by hand
 

@@ -116,7 +116,13 @@ pnpm run deploy
    - 閉じないままだと、サービストークンと、受信箱に届くワンタイムPINの両方を手に入れた人が、自分の端末を登録してアドレスを作れます。
    - あとで端末を足すときは、`ENROLL_EMAILS`をまた設定して登録し、終わったら空に戻します。
 
-端末のブラウザが独自のセキュアDNS（DNS over HTTPS）を使っている場合は、OSのDNSを使う設定にしてください。WARPは、Split Tunnelのホストの名前解決を見て初めて、そのホストへの通信をトンネルに通します。ブラウザが自分で行う名前解決はWARPから見えないため、APIが403（Forbidden）を返します。
+WARPをつないでいるのにChromeで403（Forbidden）が続く場合は、`chrome://settings/security`でセキュアDNSの設定を確かめてください。
+
+- オフにするか、Cloudflare以外の事業者を選びます。
+- OSのDNSをCloudflare（`1.1.1.1`）にしている場合は、「現在のサービスプロバイダを使う」も選ばないでください。ChromeもCloudflareのDNS over HTTPSを使うことになります。
+- 設定を変えたら、Chromeを再起動してください。
+
+WARPは、APIの名前解決を見て初めて、APIへの通信をトンネルに通します。ChromeがCloudflareのDNS over HTTPSで行う名前解決は、WARPから見えません。この問題が出るのは主にデプロイ直後の数分間です。アドレスを作れるようになったら、セキュアDNSの設定は元に戻してかまいません。
 
 #### 自分で行う設定
 
