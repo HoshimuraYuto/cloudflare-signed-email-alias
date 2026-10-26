@@ -203,6 +203,12 @@ describe("destroy", () => {
     expect(destroy).toBeGreaterThan(forget);
   });
 
+  it("without reset, says which shared settings it kept", async () => {
+    const { stdout } = cli.runCapturing("destroy.mts", COMPLETE_ENV, "example.com\n");
+
+    expect(stdout).toContain("RESET_SHARED_SETTINGS=true undoes them");
+  });
+
   it("without reset, leaves the enrollment app and its policy untouched", async () => {
     await cli.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
     expect(cli.run("destroy.mts", COMPLETE_ENV, "example.com\n")).toBe(0);

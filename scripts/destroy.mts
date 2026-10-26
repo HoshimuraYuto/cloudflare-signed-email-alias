@@ -20,6 +20,10 @@ const LET_GO = [
   ...SHARED_RESOURCES.MANAGE_GATEWAY_PROXY,
 ];
 
+const KEPT_SHARED = `Kept, because other projects may use them (RESET_SHARED_SETTINGS=true undoes them):
+  - the split tunnel, Gateway proxy and device enrollment settings, if this project managed them
+  - the DMARC record, if DMARC_POLICY was set`;
+
 const LEFT_FOR_YOU = `Remove these by hand; they were created outside this project:
   - the forwarder set up in your password manager, and the service token stored there
   - the Cloudflare One client on your devices, if you enrolled them only for this
@@ -45,7 +49,7 @@ for (const domain of settings.forwarding.keys()) {
   await disableCatchAll(domain);
 }
 await run("pnpm", ["exec", "cf", "workers", "delete", WORKER_NAME, "--force"]);
-console.log(LEFT_FOR_YOU);
+console.log(settings.resetSharedSettings ? LEFT_FOR_YOU : `${KEPT_SHARED}\n${LEFT_FOR_YOU}`);
 
 /**
  * Puts the account-wide settings back before anything is destroyed, so a failure leaves the
