@@ -91,7 +91,7 @@ pnpm run deploy
 
 1. **受信箱を確認する**。`FORWARD_TO`のそれぞれの受信箱に、Cloudflareから確認メールが届きます。メールの中の**Verify email address**を押すまで、転送は始まりません。
 2. **端末の登録を許可する**（`MANAGE_DEVICE_ENROLLMENT`が`true`のときは不要）。ダッシュボードで**Zero Trust** → **チームとリソース** → **デバイス** → **管理**タブ → **デバイス登録権限** → **管理**を開き、自分のメールアドレスを含めるポリシーをアクション「許可」で追加して保存します。
-3. **APIへの通信をCloudflare One Client経由にする**（`MANAGE_DEVICE_PROFILE`が`true`のときは不要）。出力`warp_include`に表示されたホストを、デバイスプロファイルのSplit Tunnel（Includeモード）に追加します。これらのホストへの通信をクライアント経由で送っていない端末からは、APIを使えません。
+3. **APIへの通信をCloudflare One Client経由にする**（`MANAGE_DEVICE_PROFILE`が`true`のときは不要）。出力`warp_include`に表示されたホストを、デバイスプロファイルのSplit Tunnel（Includeモード）に追加します。これらのホストへの通信をWARP経由で送っていない端末からは、APIを使えません。
 4. **Gatewayのプロキシをオンにする**（`MANAGE_GATEWAY_PROXY`が`true`のときは不要）。**Zero Trust** → **Traffic controls** → **トラフィックの設定**を開き、**Secure Web Gatewayによるトラフィックのプロキシを許可する**をTCPでオンにします。オフのままだと、登録した端末からでもAPIは403を返します。
 5. **各端末を登録する**。Cloudflare One Client（モバイルではCloudflare One Agent）を入れ、**Zero Trust security**を選んでチーム名を入力し、メールに届くワンタイムPINでログインします。チーム名は、`<team>.cloudflareaccess.com`の`<team>`の部分です。
 

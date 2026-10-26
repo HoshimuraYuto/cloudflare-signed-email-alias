@@ -134,7 +134,7 @@ set: deployment refuses to run without it, because applying would delete the set
    email address with the action **Allow**, and save.
 3. **Route the API through the Cloudflare One Client**, unless `MANAGE_DEVICE_PROFILE` is
    `true`. Add the hosts in the `warp_include` output to your device profile's split
-   tunnel (include mode). Devices that do not send them through the client cannot reach
+   tunnel (include mode). Devices that do not send them through WARP cannot reach
    the API.
 4. **Let the Gateway proxy traffic**, unless `MANAGE_GATEWAY_PROXY` is `true`. Open
    **Zero Trust** → **Traffic controls** → **Traffic settings** and turn on **Allow Secure
