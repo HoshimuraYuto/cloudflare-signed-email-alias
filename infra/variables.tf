@@ -1,5 +1,5 @@
 variable "state_passphrase" {
-  description = "Encrypts the state and plan files. At least 16 characters."
+  description = "Encrypts the state and plan files; the scripts pass the encryption settings in TF_ENCRYPTION."
   type        = string
   sensitive   = true
 }

@@ -33,6 +33,7 @@ const ACCESS_OUTPUT = JSON.stringify({
 // Each fake logs "<command line>\t<stdin>"; tofu answers `output` from a marker that `apply` creates.
 const FAKE_TOFU = `#!/bin/sh
 printf '%s\\t\\n' "tofu $*" >>"$CALLS"
+printf '%s\\t%s\\n' "\${TF_ENCRYPTION:+set}" "\${TF_DATA_DIR:-}" >>"$TOFU_ENV"
 case "$*" in
   *" init"*) echo "OpenTofu has been successfully initialized!" ;;
   *" apply"*) touch "$APPLIED" ;;
@@ -72,6 +73,8 @@ export interface FakeCli {
   /** Replaces the shared_originals output the state reports. */
   setOriginals: (originals: unknown) => Promise<void>;
   calls: () => Promise<Call[]>;
+  /** For every tofu run: whether TF_ENCRYPTION was set, and TF_DATA_DIR. */
+  tofuEnvironments: () => Promise<{ encryption: boolean; dataDir: string }[]>;
   forgetCalls: () => Promise<void>;
   remove: () => Promise<void>;
 }
@@ -93,6 +96,7 @@ export async function createFakeCli(): Promise<FakeCli> {
         HOME: dir,
         PATH: `${dir}:${process.env["PATH"] ?? ""}`,
         CALLS: log,
+        TOFU_ENV: join(dir, "tofu-env.log"),
         APPLIED: join(dir, "applied"),
         STATE_FILE: join(dir, "terraform.tfstate"),
         STATE_LIST: join(dir, "state-list"),
@@ -123,6 +127,16 @@ export async function createFakeCli(): Promise<FakeCli> {
         .map((line) => {
           const [command = "", stdin = ""] = line.split("\t");
           return { command, stdin };
+        });
+    },
+    tofuEnvironments: async () => {
+      const text = await readFile(join(dir, "tofu-env.log"), "utf8").catch(() => "");
+      return text
+        .split("\n")
+        .filter((line) => line !== "")
+        .map((line) => {
+          const [encryption = "", dataDir = ""] = line.split("\t");
+          return { encryption: encryption === "set", dataDir };
         });
     },
     forgetCalls: async () => {

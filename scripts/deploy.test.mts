@@ -105,6 +105,18 @@ describe("deploy", () => {
     expect(await cli.calls()).toEqual([]);
   });
 
+  it("hands tofu the state encryption and a data directory outside the repository", async () => {
+    cli.run("deploy.mts", COMPLETE_ENV);
+
+    const environments = await cli.tofuEnvironments();
+    expect(environments.length).toBeGreaterThan(0);
+    for (const { encryption, dataDir } of environments) {
+      expect(encryption).toBe(true);
+      expect(dataDir).toMatch(/\/\.terraform$/);
+      expect(dataDir).not.toContain("/infra/");
+    }
+  });
+
   it("runs nothing when a variable is missing", async () => {
     expect(cli.run("deploy.mts", { ...COMPLETE_ENV, SIGNING_KEY: "" })).not.toBe(0);
 
