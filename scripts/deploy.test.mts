@@ -117,6 +117,12 @@ describe("deploy", () => {
     }
   });
 
+  it("refuses a malformed DMARC_POLICY before the Worker is deployed", async () => {
+    expect(cli.run("deploy.mts", { ...COMPLETE_ENV, DMARC_POLICY: "strict" })).not.toBe(0);
+
+    expect(await cli.calls()).toEqual([]);
+  });
+
   it("runs nothing when a variable is missing", async () => {
     expect(cli.run("deploy.mts", { ...COMPLETE_ENV, SIGNING_KEY: "" })).not.toBe(0);
 

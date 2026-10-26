@@ -36,6 +36,16 @@ describe("service-token", () => {
     expect(init).toMatch(/ init .*-backend-config=path=\S+terraform\.tfstate$/);
   });
 
+  it("needs only the state passphrase, so it works after the API token expires", () => {
+    cli.run("deploy.mts", COMPLETE_ENV);
+
+    const { status } = cli.runCapturing("service-token.mts", {
+      STATE_PASSPHRASE: COMPLETE_ENV.STATE_PASSPHRASE,
+    });
+
+    expect(status).toBe(0);
+  });
+
   it("tells you to deploy first", () => {
     const { status, stderr } = cli.runCapturing("service-token.mts", COMPLETE_ENV);
 

@@ -30,7 +30,7 @@ const LEFT_FOR_YOU = `Remove these by hand; they were created outside this proje
   - the API token this run used
 Keep SIGNING_KEY if you may deploy again: the same key makes old aliases valid again.`;
 
-const settings = readSettings(process.env);
+const settings = readSettings(process.env, "destroy");
 await confirm(settings);
 await initTofu(settings);
 const recorded = await stateResources(settings);

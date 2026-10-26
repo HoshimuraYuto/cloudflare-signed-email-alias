@@ -11,7 +11,7 @@ const PENDING_ACCESS_SECRETS: Secrets = {
   ACCESS_CLIENT_ID: "pending",
 };
 
-const settings = readSettings(process.env, ["SIGNING_KEY", "ENROLL_EMAILS"]);
+const settings = readSettings(process.env, "deploy");
 await initTofu(settings);
 const dropped = flagsThatWouldDelete(settings, await stateResources(settings));
 if (dropped.length > 0) {

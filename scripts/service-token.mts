@@ -3,7 +3,7 @@ import { initTofu, tofuOutput } from "./tofu.mts";
 
 // Printed in the shape the addy.io forwarder's API key field expects, so it can be piped
 // straight to the clipboard.
-const settings = readSettings(process.env);
+const settings = readSettings(process.env, "output");
 await initTofu(settings);
 const token = await tofuOutput(settings, "service_token");
 if (token === undefined) {
