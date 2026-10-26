@@ -115,6 +115,19 @@ describe("deploy", () => {
     expect(await fake.current.calls()).toEqual([]);
   });
 
+  it("rotates the service token by replacing it in the same apply", async () => {
+    fake.current.run("deploy.mts", COMPLETE_ENV);
+    await fake.current.forgetCalls();
+
+    const { status, stdout } = fake.current.runCapturing("rotate-service-token.mts", COMPLETE_ENV);
+
+    expect(status).toBe(0);
+    expect((await fake.current.calls()).map(({ command }) => command)).toContain(
+      "tofu -chdir=infra apply -replace=cloudflare_zero_trust_access_service_token.client",
+    );
+    expect(stdout).toContain("pnpm run service-token");
+  });
+
   it("runs nothing when a variable is missing", async () => {
     expect(fake.current.run("deploy.mts", { ...COMPLETE_ENV, SIGNING_KEY: "" })).not.toBe(0);
 

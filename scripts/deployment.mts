@@ -12,8 +12,8 @@ const PENDING_ACCESS_SECRETS: Secrets = {
   ACCESS_CLIENT_ID: "pending",
 };
 
-/** Deploys the Worker and applies the infrastructure. */
-export async function deploy(settings: Settings): Promise<void> {
+/** Deploys the Worker and applies the infrastructure; applyArgs go to `tofu apply`. */
+export async function deploy(settings: Settings, applyArgs: string[] = []): Promise<void> {
   await initTofu(settings);
   const dropped = flagsThatWouldDelete(settings, await stateResources(settings));
   if (dropped.length > 0) {
@@ -23,7 +23,7 @@ export async function deploy(settings: Settings): Promise<void> {
   }
   const before = await accessSecrets(settings);
   await deployWorker(settings, before ?? PENDING_ACCESS_SECRETS);
-  await tofu(settings, ["apply"]);
+  await tofu(settings, ["apply", ...applyArgs]);
   const after = await accessSecrets(settings);
   if (after === undefined) {
     throw new Error("tofu apply finished without the worker_secrets output");
