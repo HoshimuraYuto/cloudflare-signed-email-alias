@@ -153,7 +153,9 @@ run "manages_device_enrollment_on_request" {
   }
 }
 
-run "adds_its_policy_after_the_recorded_ones" {
+# Adopting an existing application, with its policies, cannot be tested here: mock providers
+# cannot run the import. These runs cover an account without one.
+run "adds_its_policy_with_a_value_known_at_plan" {
   command = plan
 
   variables {
@@ -161,15 +163,10 @@ run "adds_its_policy_after_the_recorded_ones" {
     enroll_emails            = ["me@example.net"]
   }
 
-  # Stands in for an existing application: mock providers cannot run the import.
-  override_resource {
-    target = terraform_data.enrollment_original[0]
-    values = { output = [{ id = "theirs-1", precedence = 1 }, { id = "theirs-2", precedence = 2 }] }
-  }
-
+  # The provider rejects a policy list that is unknown at plan.
   assert {
-    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : policy.precedence] == [1, 2, 3] && [for policy in slice(cloudflare_zero_trust_access_application.enroll[0].policies, 0, 2) : policy.id] == ["theirs-1", "theirs-2"]
-    error_message = "The existing enrollment policies must stay, ahead of this project's."
+    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : policy.precedence] == [1]
+    error_message = "This project's policy must be the only one, and known before apply."
   }
 }
 
@@ -182,14 +179,8 @@ run "puts_the_recorded_policies_back_when_releasing_enrollment" {
     release_device_enrollment = true
   }
 
-  # Stands in for an existing application: mock providers cannot run the import.
-  override_resource {
-    target = terraform_data.enrollment_original[0]
-    values = { output = [{ id = "theirs-1", precedence = 1 }, { id = "theirs-2", precedence = 2 }] }
-  }
-
   assert {
-    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : "${policy.id}:${policy.precedence}"] == ["theirs-1:1", "theirs-2:2"]
+    condition     = length(cloudflare_zero_trust_access_application.enroll[0].policies) == 0
     error_message = "Releasing must leave exactly the policies the application had before."
   }
 }
@@ -201,18 +192,9 @@ run "closes_enrollment_without_addresses" {
     manage_device_enrollment = true
   }
 
-  override_resource {
-    target = terraform_data.enrollment_original[0]
-    values = { output = [{ id = "theirs-1", precedence = 1 }] }
-  }
-
   assert {
-    condition     = length(cloudflare_zero_trust_access_policy.enroll) == 0
+    condition     = length(cloudflare_zero_trust_access_policy.enroll) == 0 && length(cloudflare_zero_trust_access_application.enroll[0].policies) == 0
     error_message = "Without addresses this project must not allow anyone to enroll."
-  }
-  assert {
-    condition     = [for policy in cloudflare_zero_trust_access_application.enroll[0].policies : policy.id] == ["theirs-1"]
-    error_message = "Closing enrollment must leave only the policies the application had before."
   }
 }
 

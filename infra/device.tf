@@ -126,7 +126,7 @@ resource "terraform_data" "enrollment_original" {
 }
 
 locals {
-  enroll_originals = try(terraform_data.enrollment_original[0].output, [])
+  enroll_originals = try(terraform_data.enrollment_original[0].input, [])
   enroll_policies = concat(local.enroll_originals, [
     for policy in cloudflare_zero_trust_access_policy.enroll : {
       id         = policy.id
