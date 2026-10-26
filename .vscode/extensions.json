@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "opentofu.vscode-opentofu",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}
