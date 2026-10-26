@@ -67,6 +67,7 @@ describe("destroy", () => {
     const destroy = ran.find((command) => command.includes(" destroy"));
     expect(destroy?.match(/-exclude=\S+/g)).toEqual([
       "-exclude=cloudflare_zero_trust_device_default_profile.split_tunnel",
+      "-exclude=cloudflare_zero_trust_device_settings.gateway_proxy",
       "-exclude=cloudflare_zero_trust_access_application.enroll",
       "-exclude=cloudflare_zero_trust_access_policy.enroll",
       "-exclude=cloudflare_dns_record.dmarc",

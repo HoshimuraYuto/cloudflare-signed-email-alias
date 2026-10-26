@@ -5,13 +5,50 @@ locals {
   )
 }
 
-# The default profile and the enrollment application exist once per account, so other
-# projects may rely on them; both are managed only on request.
+# The default profile, the device settings and the enrollment application exist once per
+# account, so other projects may rely on them; all are managed only on request.
 resource "cloudflare_zero_trust_device_default_profile" "split_tunnel" {
   count = var.manage_device_profile ? 1 : 0
 
   account_id = var.account_id
   include    = local.warp_include
+}
+
+data "cloudflare_zero_trust_device_settings" "current" {
+  count = var.manage_gateway_proxy ? 1 : 0
+
+  account_id = var.account_id
+}
+
+# The device posture check passes only for traffic the Gateway proxies.
+resource "cloudflare_zero_trust_device_settings" "gateway_proxy" {
+  count = var.manage_gateway_proxy ? 1 : 0
+
+  account_id            = var.account_id
+  gateway_proxy_enabled = true
+  # The rest is copied, so that only the proxy changes.
+  gateway_udp_proxy_enabled             = data.cloudflare_zero_trust_device_settings.current[0].gateway_udp_proxy_enabled
+  disable_for_time                      = data.cloudflare_zero_trust_device_settings.current[0].disable_for_time
+  external_emergency_signal_enabled     = data.cloudflare_zero_trust_device_settings.current[0].external_emergency_signal_enabled
+  external_emergency_signal_fingerprint = data.cloudflare_zero_trust_device_settings.current[0].external_emergency_signal_fingerprint
+  external_emergency_signal_interval    = data.cloudflare_zero_trust_device_settings.current[0].external_emergency_signal_interval
+  external_emergency_signal_url         = data.cloudflare_zero_trust_device_settings.current[0].external_emergency_signal_url
+  root_certificate_installation_enabled = data.cloudflare_zero_trust_device_settings.current[0].root_certificate_installation_enabled
+  use_zt_virtual_ip                     = data.cloudflare_zero_trust_device_settings.current[0].use_zt_virtual_ip
+
+  lifecycle {
+    # The provider updates with PUT; fixed after creation so later applies send only the proxy.
+    ignore_changes = [
+      gateway_udp_proxy_enabled,
+      disable_for_time,
+      external_emergency_signal_enabled,
+      external_emergency_signal_fingerprint,
+      external_emergency_signal_interval,
+      external_emergency_signal_url,
+      root_certificate_installation_enabled,
+      use_zt_virtual_ip,
+    ]
+  }
 }
 
 resource "cloudflare_zero_trust_access_policy" "enroll" {

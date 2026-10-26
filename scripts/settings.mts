@@ -28,6 +28,7 @@ export interface Settings {
   dmarcPolicy: string | undefined;
   stateFile: string;
   manageDeviceProfile: boolean;
+  manageGatewayProxy: boolean;
   manageDeviceEnrollment: boolean;
   enrollEmails: string[];
   /** Whether destroy also removes the account-wide settings and the DMARC record. */
@@ -59,6 +60,7 @@ export function readSettings(
     stateFile:
       env["STATE_FILE"] ?? join(homedir(), ".local", "state", WORKER_NAME, "terraform.tfstate"),
     manageDeviceProfile: env["MANAGE_DEVICE_PROFILE"] === "true",
+    manageGatewayProxy: env["MANAGE_GATEWAY_PROXY"] === "true",
     manageDeviceEnrollment,
     enrollEmails,
     resetSharedSettings: env["RESET_SHARED_SETTINGS"] === "true",
@@ -74,6 +76,7 @@ export function tofuEnv(settings: Settings): Record<string, string> {
     ...(settings.apiSubdomain === undefined ? {} : { TF_VAR_api_subdomain: settings.apiSubdomain }),
     ...(settings.dmarcPolicy === undefined ? {} : { TF_VAR_dmarc_policy: settings.dmarcPolicy }),
     TF_VAR_manage_device_profile: String(settings.manageDeviceProfile),
+    TF_VAR_manage_gateway_proxy: String(settings.manageGatewayProxy),
     TF_VAR_manage_device_enrollment: String(settings.manageDeviceEnrollment),
     TF_VAR_enroll_emails: JSON.stringify(settings.enrollEmails),
   };
@@ -85,6 +88,7 @@ export function tofuEnv(settings: Settings): Record<string, string> {
  */
 export const SHARED_RESOURCES = {
   MANAGE_DEVICE_PROFILE: ["cloudflare_zero_trust_device_default_profile.split_tunnel"],
+  MANAGE_GATEWAY_PROXY: ["cloudflare_zero_trust_device_settings.gateway_proxy"],
   MANAGE_DEVICE_ENROLLMENT: [
     "cloudflare_zero_trust_access_application.enroll",
     "cloudflare_zero_trust_access_policy.enroll",
@@ -99,6 +103,7 @@ export const SHARED_RESOURCES = {
 export function flagsThatWouldDelete(settings: Settings, recorded: readonly string[]): string[] {
   const managed = [
     ["MANAGE_DEVICE_PROFILE", settings.manageDeviceProfile, SHARED_RESOURCES.MANAGE_DEVICE_PROFILE],
+    ["MANAGE_GATEWAY_PROXY", settings.manageGatewayProxy, SHARED_RESOURCES.MANAGE_GATEWAY_PROXY],
     [
       "MANAGE_DEVICE_ENROLLMENT",
       settings.manageDeviceEnrollment,

@@ -40,6 +40,12 @@ variable "manage_device_profile" {
   default     = false
 }
 
+variable "manage_gateway_proxy" {
+  description = "Turn on the account's Gateway proxy, which the device posture check needs."
+  type        = bool
+  default     = false
+}
+
 variable "manage_device_enrollment" {
   description = "Replace the account's device enrollment permissions with a policy allowing enroll_emails."
   type        = bool

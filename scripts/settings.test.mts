@@ -86,6 +86,7 @@ describe("tofuEnv", () => {
       TF_VAR_account_id: "account",
       TF_VAR_forwarding: JSON.stringify({ "example.com": "inbox@example.net" }),
       TF_VAR_manage_device_profile: "false",
+      TF_VAR_manage_gateway_proxy: "false",
       TF_VAR_manage_device_enrollment: "false",
       TF_VAR_enroll_emails: "[]",
     });

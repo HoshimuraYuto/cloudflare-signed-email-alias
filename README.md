@@ -115,6 +115,7 @@ set: deployment refuses to run without it, because applying would delete the set
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MANAGE_DEVICE_ENROLLMENT` | Sets who may enroll devices with the addresses in `ENROLL_EMAILS` (comma-separated)                                                                                             |
 | `MANAGE_DEVICE_PROFILE`    | Sets the split tunnel of the default device profile with this project's hosts                                                                                                   |
+| `MANAGE_GATEWAY_PROXY`     | Turns on **Allow Secure Web Gateway to proxy traffic** (TCP), which the device check on the API needs                                                                           |
 | `DMARC_POLICY`             | Publishes a DMARC record with this policy (`none`, `quarantine` or `reject`) on every alias domain; stops if a domain already has one. `reject` suits domains that send no mail |
 
 ### After the first deployment
@@ -129,7 +130,11 @@ set: deployment refuses to run without it, because applying would delete the set
    `true`. Add the hosts in the `warp_include` output to your device profile's split
    tunnel (include mode). Devices that do not send them through the client cannot reach
    the API.
-4. **Enroll each device.** Install the Cloudflare One Client (Cloudflare One Agent on
+4. **Let the Gateway proxy traffic**, unless `MANAGE_GATEWAY_PROXY` is `true`. Open
+   **Zero Trust** → **Traffic controls** → **Traffic settings** and turn on **Allow Secure
+   Web Gateway to proxy traffic** with TCP. Without it the API answers 403 even from an
+   enrolled device.
+5. **Enroll each device.** Install the Cloudflare One Client (Cloudflare One Agent on
    mobile), choose **Zero Trust security**, enter your team name, and sign in with the
    one-time PIN sent to your email address. The team name is the `<team>` part of
    `<team>.cloudflareaccess.com`.

@@ -75,6 +75,7 @@ describe("deploy", () => {
   it.each([
     ["MANAGE_DEVICE_ENROLLMENT", "cloudflare_zero_trust_access_application.enroll[0]"],
     ["MANAGE_DEVICE_PROFILE", "cloudflare_zero_trust_device_default_profile.split_tunnel[0]"],
+    ["MANAGE_GATEWAY_PROXY", "cloudflare_zero_trust_device_settings.gateway_proxy[0]"],
     ["DMARC_POLICY", 'cloudflare_dns_record.dmarc["example.com"]'],
   ])("refuses to drop %s while the state holds what it managed", async (flag, resource) => {
     await cli.recordState([resource]);

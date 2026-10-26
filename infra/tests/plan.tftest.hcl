@@ -26,6 +26,10 @@ mock_provider "cloudflare" {
     defaults = { result = [] }
   }
 
+  mock_data "cloudflare_zero_trust_device_settings" {
+    defaults = { gateway_proxy_enabled = false, gateway_udp_proxy_enabled = true, use_zt_virtual_ip = true }
+  }
+
   mock_data "cloudflare_dns_records" {
     defaults = { result = [] }
   }
@@ -381,4 +385,30 @@ run "rejects_an_unknown_dmarc_policy" {
   }
 
   expect_failures = [var.dmarc_policy]
+}
+
+run "leaves_the_gateway_proxy_alone_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(cloudflare_zero_trust_device_settings.gateway_proxy) == 0
+    error_message = "The account's device settings must not be touched unless asked."
+  }
+}
+
+run "turns_on_the_gateway_proxy_on_request" {
+  command = plan
+
+  variables {
+    manage_gateway_proxy = true
+  }
+
+  assert {
+    condition     = cloudflare_zero_trust_device_settings.gateway_proxy[0].gateway_proxy_enabled == true
+    error_message = "The posture check needs the Gateway proxy."
+  }
+  assert {
+    condition     = cloudflare_zero_trust_device_settings.gateway_proxy[0].gateway_udp_proxy_enabled == true && cloudflare_zero_trust_device_settings.gateway_proxy[0].use_zt_virtual_ip == true
+    error_message = "Every other device setting must stay as it was."
+  }
 }
