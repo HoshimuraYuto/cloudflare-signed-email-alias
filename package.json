@@ -11,7 +11,7 @@
     "destroy": "node scripts/destroy.mts",
     "service-token": "node scripts/service-token.mts",
     "rotate-service-token": "node scripts/rotate-service-token.mts",
-    "test": "vitest run"
+    "test": "vitest run && vitest run --root scripts"
   },
   "dependencies": {
     "jose": "6.2.13",
