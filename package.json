@@ -3,26 +3,44 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && secretlint \"**/*\"",
-    "fix": "oxfmt . && oxlint --type-aware --fix",
-    "prepare": "lefthook install"
+    "check": "cf workers types && oxfmt --check . && oxlint --type-aware --deny-warnings && tsc && tsc -p test && tsc -p scripts && secretlint \"**/*\" && vitest run && vitest run --root scripts && pnpm infra:check",
+    "fix": "oxfmt . && oxlint --type-aware --fix && tofu -chdir=infra fmt -recursive",
+    "infra:check": "tofu -chdir=infra fmt -check -recursive && tofu -chdir=infra validate && tofu -chdir=infra test",
+    "prepare": "lefthook install",
+    "deploy": "node scripts/deploy.mts",
+    "destroy": "node scripts/destroy.mts",
+    "service-token": "node scripts/service-token.mts",
+    "rotate-service-token": "node scripts/rotate-service-token.mts",
+    "test": "vitest run && vitest run --root scripts"
+  },
+  "dependencies": {
+    "jose": "6.2.13",
+    "tldts-icann": "7.4.19"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
+    "@cloudflare/vitest-plugin": "1.4.6",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
     "@commitlint/types": "21.2.3",
+    "@msw/cloudflare": "0.2.0",
     "@secretlint/secretlint-rule-pattern": "13.0.7",
     "@secretlint/secretlint-rule-preset-recommend": "13.0.7",
+    "@types/node": "24.19.2",
+    "cf": "1.0.0-beta.20",
     "lefthook": "2.2.1",
+    "msw": "3.0.3",
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",
     "oxlint-tsgolint": "7.0.2004",
     "secretlint": "13.0.7",
     "semantic-release": "25.0.9",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
   },
   "engines": {
-    "node": ">=24"
+    "node": ">=24.22.0"
   },
   "packageManager": "pnpm@12.14.0"
 }

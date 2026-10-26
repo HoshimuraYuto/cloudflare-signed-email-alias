@@ -10,6 +10,7 @@
     "module": "preserve",
     "moduleResolution": "bundler",
     "target": "esnext",
+    "lib": ["esnext"],
     "types": [],
     // For nodejs:
     // "lib": ["esnext"],
@@ -18,6 +19,7 @@
 
     // Other Outputs
     "noEmit": true,
+    "allowImportingTsExtensions": true,
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
@@ -38,5 +40,8 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true
-  }
+  },
+  // Globs skip dot folders, so the types cf generates must be listed by name.
+  "include": ["**/*", ".cloudflare/types"],
+  "exclude": ["test", "scripts"]
 }

@@ -2,7 +2,9 @@ pmOnFail: error
 saveExact: true
 
 allowBuilds:
+  esbuild: false
   lefthook: false
+  workerd: false
 strictDepBuilds: true
 
 blockExoticSubdeps: true
@@ -19,3 +21,8 @@ trustPolicyExcludePrune: true
 
 audit:
   level: high
+
+# Until miniflare and @cloudflare/config pick up the fixes (GHSA-xjj6-f33q-929c, GHSA-mrhx-c7xc-m3w5).
+overrides:
+  undici@7.29.1: 7.30.1
+  zod@4.6.5: 4.6.6

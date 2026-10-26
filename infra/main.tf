@@ -1,0 +1,42 @@
+terraform {
+  # The path comes from `init -backend-config`, so the state stays outside the repository.
+  backend "local" {}
+
+  required_providers {
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "5.28.1"
+    }
+  }
+}
+
+provider "cloudflare" {}
+
+locals {
+  # Must match worker.name in cloudflare.config.ts.
+  worker_name = "cloudflare-signed-email-alias"
+  # Looked up from the list: the single-Worker data source returns the name as its id,
+  # which Access rejects.
+  worker_id = one([for worker in data.cloudflare_workers.all.result : worker.id if worker.name == local.worker_name])
+  # Only the IDs: iterating the zone objects drags in deprecated attributes and their warnings.
+  zone_ids = { for domain, zone in data.cloudflare_zone.alias : domain => zone.id }
+}
+
+data "cloudflare_workers" "all" {
+  account_id = var.account_id
+}
+
+data "cloudflare_zone" "alias" {
+  for_each = var.forwarding
+
+  filter = { name = each.key }
+}
+
+resource "cloudflare_workers_custom_domain" "api" {
+  for_each = local.zone_ids
+
+  account_id = var.account_id
+  zone_id    = each.value
+  hostname   = "${var.api_subdomain}.${each.key}"
+  service    = local.worker_name
+}
