@@ -71,6 +71,12 @@ Store each value below in your password manager; deployment reads them from ther
    Limit the token further at the bottom of the same screen: set **TTL** to the days you
    plan to deploy, and **Client IP Address Filtering** to the address you deploy from.
    Create a new token whenever you deploy or remove again. The token is shown only once.
+   If you set IP address filtering, disconnect WARP (the Cloudflare One Client) while you
+   deploy or remove: with the Gateway proxy on, WARP sends the commands' traffic out
+   through Cloudflare, from an address the filter rejects. The filter also stops matching
+   when your own address changes, and an IPv6 address can change after a restart. Every
+   account call then fails with 401 Authentication error although the token is still
+   valid; add the new address to the filter.
 
 3. **State passphrase.** Choose a passphrase of 16 characters or more. It encrypts the
    record OpenTofu keeps of what it created, which includes the service token.
