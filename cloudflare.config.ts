@@ -10,6 +10,8 @@ export default defineConfig({
     // Written out even where it matches the default: only the custom domain is behind Access.
     workersDev: false,
     previewUrls: false,
+    // cf sends observability as off when unset, unlike the dashboard's default for new Workers.
+    observability: { enabled: true },
     env: {
       SIGNING_KEY: bindings.secret(),
       FORWARD_TO: bindings.secret(),
