@@ -42,6 +42,8 @@ export interface Settings {
   manageGatewayProxy: boolean;
   manageDeviceEnrollment: boolean;
   enrollEmails: string[];
+  /** Aliases that stop receiving mail, in lower case. */
+  revokedAliases: string[];
   resetSharedSettings: boolean;
 }
 
@@ -65,6 +67,7 @@ export function readSettings(env: NodeJS.ProcessEnv, command: Command): Settings
     manageGatewayProxy: env["MANAGE_GATEWAY_PROXY"] === "true",
     manageDeviceEnrollment: env["MANAGE_DEVICE_ENROLLMENT"] === "true",
     enrollEmails: splitList(env["ENROLL_EMAILS"]),
+    revokedAliases: splitList(env["REVOKED_ALIASES"]?.toLowerCase()),
     resetSharedSettings: env["RESET_SHARED_SETTINGS"] === "true",
   };
 }

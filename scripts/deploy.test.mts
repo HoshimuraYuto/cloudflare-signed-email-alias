@@ -26,6 +26,7 @@ function workerSecrets(access: Record<string, string>) {
   return {
     SIGNING_KEY: COMPLETE_ENV.SIGNING_KEY,
     FORWARD_TO: "example.com=inbox@example.net",
+    REVOKED_ALIASES: "[]",
     ...access,
   };
 }
@@ -51,8 +52,21 @@ describe("deploy", () => {
     expect(await deployedSecrets()).toEqual([workerSecrets(APPLIED_ACCESS)]);
   });
 
+  it("passes the revoked aliases to the Worker as a JSON array", async () => {
+    const env = {
+      ...COMPLETE_ENV,
+      REVOKED_ALIASES: " Shop.k7q2.x3m9p0ab@example.com, ,a.b.c@example.com ",
+    };
+    expect(fake.current.run("deploy.mts", env)).toBe(0);
+
+    const [first] = await deployedSecrets();
+    expect(first).toMatchObject({
+      REVOKED_ALIASES: JSON.stringify(["shop.k7q2.x3m9p0ab@example.com", "a.b.c@example.com"]),
+    });
+  });
+
   it("keeps the Worker's secrets out of the environment of every command it runs", async () => {
-    fake.current.run("deploy.mts", COMPLETE_ENV);
+    fake.current.run("deploy.mts", { ...COMPLETE_ENV, REVOKED_ALIASES: "a.b.c@example.com" });
 
     expect(await fake.current.leakedSecrets()).toEqual([]);
   });

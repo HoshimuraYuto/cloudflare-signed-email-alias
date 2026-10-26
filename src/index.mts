@@ -15,6 +15,10 @@ export default {
     return handleApi(request, { signingKey: env.SIGNING_KEY, forwarding: env.FORWARD_TO });
   },
   async email(message, env, _ctx) {
-    await handleEmail(message, { signingKey: env.SIGNING_KEY, forwarding: env.FORWARD_TO });
+    await handleEmail(message, {
+      signingKey: env.SIGNING_KEY,
+      forwarding: env.FORWARD_TO,
+      revoked: env.REVOKED_ALIASES,
+    });
   },
 } satisfies ExportedHandler<Env>;

@@ -4,7 +4,13 @@ import { spawn } from "node:child_process";
  * Kept out of every child's environment, so a compromised CLI or provider plugin cannot read
  * them there. Children that need one get it over stdin or as a TF_VAR_.
  */
-const WITHHELD = ["SIGNING_KEY", "STATE_PASSPHRASE", "FORWARD_TO", "ENROLL_EMAILS"];
+const WITHHELD = [
+  "SIGNING_KEY",
+  "STATE_PASSPHRASE",
+  "FORWARD_TO",
+  "ENROLL_EMAILS",
+  "REVOKED_ALIASES",
+];
 
 interface RunOptions {
   env?: Record<string, string>;

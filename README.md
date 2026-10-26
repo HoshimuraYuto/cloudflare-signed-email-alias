@@ -104,6 +104,7 @@ your password manager's CLI into the environment, for example with `op run` (1Pa
 | `FORWARD_TO`            | Each alias domain and the inbox its mail goes to, such as `example.com=you@example.net`; separate several domains with commas     |
 | `API_SUBDOMAIN`         | Optional. The API hostname created in every alias domain; `email-alias-api` by default, which gives `email-alias-api.example.com` |
 | `STATE_FILE`            | Optional. Where the encrypted state is kept; defaults to `~/.local/state/cloudflare-signed-email-alias/terraform.tfstate`         |
+| `REVOKED_ALIASES`       | Optional. Aliases that stop receiving mail, separated by commas; see [Revoke an alias](#revoke-an-alias)                          |
 
 The command deploys the Worker, shows the Cloudflare changes and waits for your approval,
 then passes the Access values to the Worker. Run it again after any change; it is safe to
@@ -196,6 +197,12 @@ pnpm run rotate-service-token
 
 It uses the same environment variables as deploy. The old token stops working at once;
 put the new output of `pnpm run service-token` into the password manager.
+
+### Revoke an alias
+
+If an alias receives spam, add it to `REVOKED_ALIASES` and run `pnpm run deploy` again.
+Mail to it is then rejected like mail to an address that never existed. Remove it from the
+list and deploy again to receive its mail again.
 
 ## Remove
 

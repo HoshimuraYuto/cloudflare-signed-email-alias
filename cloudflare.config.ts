@@ -13,6 +13,7 @@ export default defineConfig({
     env: {
       SIGNING_KEY: bindings.secret(),
       FORWARD_TO: bindings.secret(),
+      REVOKED_ALIASES: bindings.secret(),
       ACCESS_TEAM_DOMAIN: bindings.secret(),
       ACCESS_AUD: bindings.secret(),
       ACCESS_CLIENT_ID: bindings.secret(),

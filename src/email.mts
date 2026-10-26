@@ -1,5 +1,6 @@
 import { importSigningKey, verifyAddress } from "./address.mts";
 import { parseForwarding } from "./forwarding.mts";
+import { parseRevoked } from "./revoked.mts";
 
 const REJECT_REASON = "Unknown address";
 
@@ -9,6 +10,8 @@ interface MailSettings {
   signingKey: string;
   /** FORWARD_TO as parseForwarding reads it. */
   forwarding: string;
+  /** REVOKED_ALIASES as parseRevoked reads it. */
+  revoked: string;
 }
 
 /**
@@ -19,9 +22,11 @@ interface MailSettings {
 export async function handleEmail(message: IncomingMail, settings: MailSettings): Promise<void> {
   const key = await importSigningKey(settings.signingKey);
   const forwarding = parseForwarding(settings.forwarding);
-  const domain = message.to.trim().toLowerCase().split("@").at(-1) ?? "";
-  const inbox = forwarding.get(domain);
-  if (inbox !== undefined && (await verifyAddress(message.to, key))) {
+  const revoked = parseRevoked(settings.revoked);
+  const to = message.to.trim().toLowerCase();
+  const inbox = forwarding.get(to.split("@").at(-1) ?? "");
+  // A revoked alias gets the same answer as an unknown one, so the reply reveals nothing.
+  if (inbox !== undefined && !revoked.has(to) && (await verifyAddress(to, key))) {
     await message.forward(inbox);
     return;
   }

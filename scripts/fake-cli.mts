@@ -33,7 +33,7 @@ const ACCESS_OUTPUT = JSON.stringify({
 });
 
 /** Appends to $LEAKS the name of every withheld variable the fake finds in its environment. */
-const REPORT_LEAKS = `for name in SIGNING_KEY STATE_PASSPHRASE FORWARD_TO ENROLL_EMAILS; do
+const REPORT_LEAKS = `for name in SIGNING_KEY STATE_PASSPHRASE FORWARD_TO ENROLL_EMAILS REVOKED_ALIASES; do
   env | grep -q "^$name=" && echo "$name" >>"$LEAKS"
 done
 `;

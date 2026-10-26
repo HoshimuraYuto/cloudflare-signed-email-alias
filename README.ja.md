@@ -80,6 +80,7 @@ pnpm run deploy
 | `FORWARD_TO`            | エイリアス用のドメインと、そのメールを受け取る受信箱。例：`example.com=you@example.net`。複数のドメインはカンマで区切る |
 | `API_SUBDOMAIN`         | 任意。各ドメインに作るAPIのホスト名。既定は`email-alias-api`で、`email-alias-api.example.com`のようになる               |
 | `STATE_FILE`            | 任意。暗号化したstateの保存先。既定は`~/.local/state/cloudflare-signed-email-alias/terraform.tfstate`                   |
+| `REVOKED_ALIASES`       | 任意。メールを受け取らなくするエイリアス。カンマで区切る。[エイリアスの無効化](#エイリアスの無効化)を参照               |
 
 このコマンドは、Workerをデプロイしたあと、Cloudflareに加える変更を表示して承認を待ちます。承認すると変更を反映し、最後にAccessの値をWorkerに渡します。設定を変えたときは、もう一度実行してください。何度実行しても問題ありません。
 
@@ -146,6 +147,13 @@ pnpm run rotate-service-token
 ```
 
 デプロイと同じ環境変数を使います。古いトークンはすぐに使えなくなります。`pnpm run service-token`の新しい出力を、パスワードマネージャーに入れ直してください。
+
+### エイリアスの無効化
+
+スパムが届くようになったエイリアスは、`REVOKED_ALIASES`に加えて`pnpm run deploy`をもう一度実行します。
+
+- そのアドレスあてのメールは、存在しないアドレスと同じように拒否されます。
+- 一覧から外してもう一度デプロイすれば、また受け取れます。
 
 ## 削除
 

@@ -50,6 +50,7 @@ async function deployWorker(settings: Settings, access: Secrets): Promise<void> 
   const secrets: Secrets = {
     SIGNING_KEY: settings.get("SIGNING_KEY"),
     FORWARD_TO: settings.get("FORWARD_TO"),
+    REVOKED_ALIASES: JSON.stringify(settings.revokedAliases),
     ...access,
   };
   await cf(["deploy", "--secrets-file", "/dev/stdin"], JSON.stringify(secrets));
