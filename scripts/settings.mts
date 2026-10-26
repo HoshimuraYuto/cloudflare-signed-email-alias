@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { parseForwarding } from "../src/forwarding.mts";
+import { splitList } from "./json.mts";
 
 // Must match worker.name in cloudflare.config.ts and local.worker_name in infra/main.tf.
 export const WORKER_NAME = "cloudflare-signed-email-alias";
@@ -124,57 +125,4 @@ export function tofuEnv(settings: Settings): Record<string, string> {
     TF_VAR_manage_device_enrollment: String(settings.manageDeviceEnrollment),
     TF_VAR_enroll_emails: JSON.stringify(settings.enrollEmails),
   };
-}
-
-/**
- * Account-wide settings that other projects may rely on, by the flag that manages them.
- * Destroy keeps them unless RESET_SHARED_SETTINGS is true.
- */
-export const SHARED_RESOURCES = {
-  MANAGE_DEVICE_PROFILE: [
-    "cloudflare_zero_trust_device_default_profile.split_tunnel",
-    "terraform_data.split_tunnel_original",
-  ],
-  MANAGE_GATEWAY_PROXY: [
-    "cloudflare_zero_trust_device_settings.gateway_proxy",
-    "terraform_data.gateway_proxy_original",
-  ],
-  MANAGE_DEVICE_ENROLLMENT: [
-    "cloudflare_zero_trust_access_application.enroll",
-    "cloudflare_zero_trust_access_policy.enroll",
-    "terraform_data.enrollment_original",
-  ],
-  DMARC_POLICY: ["cloudflare_dns_record.dmarc"],
-} as const;
-
-/**
- * Flags that are off now although the state holds what they manage: applying would delete
- * those account-wide settings.
- */
-export function flagsThatWouldDelete(settings: Settings, recorded: readonly string[]): string[] {
-  const managed = [
-    ["MANAGE_DEVICE_PROFILE", settings.manageDeviceProfile, SHARED_RESOURCES.MANAGE_DEVICE_PROFILE],
-    ["MANAGE_GATEWAY_PROXY", settings.manageGatewayProxy, SHARED_RESOURCES.MANAGE_GATEWAY_PROXY],
-    [
-      "MANAGE_DEVICE_ENROLLMENT",
-      settings.manageDeviceEnrollment,
-      SHARED_RESOURCES.MANAGE_DEVICE_ENROLLMENT,
-    ],
-    ["DMARC_POLICY", settings.dmarcPolicy !== undefined, SHARED_RESOURCES.DMARC_POLICY],
-  ] as const;
-  return managed
-    .filter(([, on, names]) => !on && names.some((name) => isRecorded(recorded, name)))
-    .map(([flag]) => flag);
-}
-
-/** Whether the state holds the resource, which these resources always do as instance [0]. */
-export function isRecorded(recorded: readonly string[], name: string): boolean {
-  return recorded.some((entry) => entry === name || entry.startsWith(`${name}[`));
-}
-
-export function splitList(text: string | undefined): string[] {
-  return (text ?? "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item !== "");
 }

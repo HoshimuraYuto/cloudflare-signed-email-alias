@@ -1,11 +1,11 @@
 import { readSettings } from "./settings.mts";
-import { initTofu, tofuOutput } from "./tofu.mts";
+import { initTofu, outputRecord } from "./tofu.mts";
 
 // Printed in the shape the addy.io forwarder's API key field expects, so it can be piped
 // straight to the clipboard.
 const settings = readSettings(process.env, "output");
 await initTofu(settings);
-const token = await tofuOutput(settings, "service_token");
+const token = await outputRecord(settings, "service_token");
 if (token === undefined) {
   throw new Error("No service token yet; run pnpm run deploy first.");
 }

@@ -1,4 +1,4 @@
-const DOMAIN_PATTERN = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/;
+import { DOMAIN_PATTERN } from "./domain.mts";
 
 /**
  * Reads FORWARD_TO, such as "example.com=inbox@example.net,example.org=other@example.net":

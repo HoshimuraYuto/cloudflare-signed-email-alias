@@ -3,6 +3,8 @@ import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { afterEach, beforeEach } from "vitest";
+
 export const APPLIED_ACCESS = {
   ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
   ACCESS_AUD: "aud",
@@ -144,6 +146,25 @@ export async function createFakeCli(): Promise<FakeCli> {
     },
     remove: async () => {
       await rm(dir, { recursive: true });
+    },
+  };
+}
+
+/** A fresh fake per test; read `.current` inside the test. */
+export function useFakeCli(): { readonly current: FakeCli } {
+  let cli: FakeCli | undefined;
+  beforeEach(async () => {
+    cli = await createFakeCli();
+  });
+  afterEach(async () => {
+    await cli?.remove();
+  });
+  return {
+    get current(): FakeCli {
+      if (cli === undefined) {
+        throw new Error("useFakeCli() is ready only inside a test");
+      }
+      return cli;
     },
   };
 }

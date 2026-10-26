@@ -1,44 +1,36 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { COMPLETE_ENV, createFakeCli, type FakeCli } from "./fake-cli.mts";
+import { COMPLETE_ENV, useFakeCli } from "./fake-cli.mts";
 
 const TWO_DOMAINS = {
   ...COMPLETE_ENV,
   FORWARD_TO: "example.com=inbox@example.net,example.org=other@example.net",
 };
 
-let cli: FakeCli;
-
-beforeEach(async () => {
-  cli = await createFakeCli();
-});
-
-afterEach(async () => {
-  await cli.remove();
-});
+const fake = useFakeCli();
 
 async function commands(): Promise<string[]> {
-  return (await cli.calls()).map(({ command }) => command);
+  return (await fake.current.calls()).map(({ command }) => command);
 }
 
 describe("destroy", () => {
   it("removes nothing unless the alias domain is typed back", async () => {
-    expect(cli.run("destroy.mts", COMPLETE_ENV, "example.org\n")).not.toBe(0);
+    expect(fake.current.run("destroy.mts", COMPLETE_ENV, "example.org\n")).not.toBe(0);
 
-    expect(await cli.calls()).toEqual([]);
+    expect(await fake.current.calls()).toEqual([]);
   });
 
   it.each([
     ["only one of them", "example.com\n"],
     ["one more", "example.com, example.org, example.edu\n"],
   ])("with two domains, removes nothing when %s is typed", async (_case, answer) => {
-    expect(cli.run("destroy.mts", TWO_DOMAINS, answer)).not.toBe(0);
+    expect(fake.current.run("destroy.mts", TWO_DOMAINS, answer)).not.toBe(0);
 
-    expect(await cli.calls()).toEqual([]);
+    expect(await fake.current.calls()).toEqual([]);
   });
 
   it("with two domains, disables the catch-all of each", async () => {
-    expect(cli.run("destroy.mts", TWO_DOMAINS, " Example.org ,example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", TWO_DOMAINS, " Example.org ,example.com\n")).toBe(0);
 
     const catchAlls = (await commands()).filter((command) => command.includes("catch-all"));
     expect(catchAlls.map((command) => /--zone (\S+)/.exec(command)?.[1])).toEqual([
@@ -48,7 +40,7 @@ describe("destroy", () => {
   });
 
   it("destroys the infra, then disables the catch-all, then deletes the Worker", async () => {
-    expect(cli.run("destroy.mts", COMPLETE_ENV, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", COMPLETE_ENV, "example.com\n")).toBe(0);
 
     const ran = await commands();
     expect(
@@ -60,7 +52,11 @@ describe("destroy", () => {
 
   it("keeps the account-wide settings unless asked to reset them", async () => {
     expect(
-      cli.run("destroy.mts", { ...COMPLETE_ENV, MANAGE_DEVICE_PROFILE: "true" }, "example.com\n"),
+      fake.current.run(
+        "destroy.mts",
+        { ...COMPLETE_ENV, MANAGE_DEVICE_PROFILE: "true" },
+        "example.com\n",
+      ),
     ).toBe(0);
 
     const ran = await commands();
@@ -79,14 +75,14 @@ describe("destroy", () => {
   });
 
   it("on reset, puts the shared settings back and lets go of them before destroying", async () => {
-    await cli.recordState([
+    await fake.current.recordState([
       "cloudflare_zero_trust_device_default_profile.split_tunnel[0]",
       "terraform_data.split_tunnel_original[0]",
       "cloudflare_zero_trust_device_settings.gateway_proxy[0]",
       "terraform_data.gateway_proxy_original[0]",
     ]);
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     const ran = await commands();
     const step = (pattern: RegExp) => ran.findIndex((command) => pattern.test(command));
@@ -101,10 +97,12 @@ describe("destroy", () => {
   });
 
   it("on reset, puts the split tunnel and Gateway proxy back as they were", async () => {
-    await cli.recordState(["cloudflare_zero_trust_device_default_profile.split_tunnel[0]"]);
+    await fake.current.recordState([
+      "cloudflare_zero_trust_device_default_profile.split_tunnel[0]",
+    ]);
     // The flags are off on purpose: the state, not the flags, says what was managed.
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     const ran = await commands();
     expect(ran.find((command) => command.includes(" destroy"))).not.toContain("-exclude");
@@ -117,13 +115,13 @@ describe("destroy", () => {
   });
 
   it("leaves the Gateway proxy on when it was on before", async () => {
-    await cli.recordState(["cloudflare_zero_trust_device_settings.gateway_proxy[0]"]);
-    await cli.setOriginals({
+    await fake.current.recordState(["cloudflare_zero_trust_device_settings.gateway_proxy[0]"]);
+    await fake.current.setOriginals({
       split_tunnel: null,
       gateway_proxy: { gateway_proxy_enabled: true, gateway_udp_proxy_enabled: false },
     });
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     expect(
       (await commands()).find((command) => command.includes("devices settings update")),
@@ -131,8 +129,10 @@ describe("destroy", () => {
   });
 
   it("does not put back a split tunnel that was recorded as this project's own", async () => {
-    await cli.recordState(["cloudflare_zero_trust_device_default_profile.split_tunnel[0]"]);
-    await cli.setOriginals({
+    await fake.current.recordState([
+      "cloudflare_zero_trust_device_default_profile.split_tunnel[0]",
+    ]);
+    await fake.current.setOriginals({
       split_tunnel: {
         include: [{ host: "team.cloudflareaccess.com" }, { host: "email-alias-api.example.com" }],
         exclude: null,
@@ -140,7 +140,7 @@ describe("destroy", () => {
       gateway_proxy: null,
     });
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    const { status, stderr } = cli.runCapturing("destroy.mts", env, "example.com\n");
+    const { status, stderr } = fake.current.runCapturing("destroy.mts", env, "example.com\n");
 
     expect(status).toBe(0);
     expect(stderr).toContain("set the split tunnel back by hand");
@@ -150,11 +150,11 @@ describe("destroy", () => {
   });
 
   it("still spots its own split tunnel after releasing the enrollment app", async () => {
-    await cli.recordState([
+    await fake.current.recordState([
       "cloudflare_zero_trust_access_application.enroll[0]",
       "cloudflare_zero_trust_device_default_profile.split_tunnel[0]",
     ]);
-    await cli.setOriginals({
+    await fake.current.setOriginals({
       split_tunnel: {
         include: [{ host: "team.cloudflareaccess.com" }, { host: "email-alias-api.example.com" }],
         exclude: null,
@@ -162,20 +162,22 @@ describe("destroy", () => {
       gateway_proxy: null,
     });
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    const { status, stderr } = cli.runCapturing("destroy.mts", env, "example.com\n");
+    const { status, stderr } = fake.current.runCapturing("destroy.mts", env, "example.com\n");
 
     expect(status).toBe(0);
     expect(stderr).toContain("set the split tunnel back by hand");
   });
 
   it("puts back an include-mode split tunnel in include mode", async () => {
-    await cli.recordState(["cloudflare_zero_trust_device_default_profile.split_tunnel[0]"]);
-    await cli.setOriginals({
+    await fake.current.recordState([
+      "cloudflare_zero_trust_device_default_profile.split_tunnel[0]",
+    ]);
+    await fake.current.setOriginals({
       split_tunnel: { include: [{ host: "intranet.example.com", address: null }], exclude: null },
       gateway_proxy: null,
     });
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     const ran = await commands();
     expect(ran.find((command) => command.includes("profiles default update"))).toMatch(
@@ -185,10 +187,10 @@ describe("destroy", () => {
   });
 
   it("on reset, detaches its policy from the enrollment app and keeps the app", async () => {
-    await cli.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
+    await fake.current.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
     // The flag is off on purpose: the release must still keep the app in the plan.
     const env = { ...COMPLETE_ENV, RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     const ran = await commands();
     const step = (pattern: RegExp) => ran.findIndex((command) => pattern.test(command));
@@ -205,25 +207,25 @@ describe("destroy", () => {
   });
 
   it("without reset, says which shared settings it kept", async () => {
-    const { stdout } = cli.runCapturing("destroy.mts", COMPLETE_ENV, "example.com\n");
+    const { stdout } = fake.current.runCapturing("destroy.mts", COMPLETE_ENV, "example.com\n");
 
     expect(stdout).toContain("RESET_SHARED_SETTINGS=true undoes them");
   });
 
   it("without reset, leaves the enrollment app and its policy untouched", async () => {
-    await cli.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
-    expect(cli.run("destroy.mts", COMPLETE_ENV, "example.com\n")).toBe(0);
+    await fake.current.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
+    expect(fake.current.run("destroy.mts", COMPLETE_ENV, "example.com\n")).toBe(0);
 
     const ran = await commands();
     expect(ran.some((command) => / apply | state rm /.test(command))).toBe(false);
   });
 
   it("leaves the split tunnel alone when this project never managed it", async () => {
-    await cli.recordState(['cloudflare_workers_custom_domain.api["example.com"]']);
+    await fake.current.recordState(['cloudflare_workers_custom_domain.api["example.com"]']);
     // What the output holds when the flags were off at every deploy.
-    await cli.setOriginals({ split_tunnel: null, gateway_proxy: null });
+    await fake.current.setOriginals({ split_tunnel: null, gateway_proxy: null });
     const env = { ...COMPLETE_ENV, MANAGE_DEVICE_PROFILE: "true", RESET_SHARED_SETTINGS: "true" };
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
 
     expect((await commands()).some((command) => command.includes("profiles default update"))).toBe(
       false,
@@ -233,12 +235,12 @@ describe("destroy", () => {
   it("does not need ENROLL_EMAILS even while enrollment is managed", async () => {
     const env = { ...COMPLETE_ENV, MANAGE_DEVICE_ENROLLMENT: "true" };
 
-    expect(cli.run("destroy.mts", env, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", env, "example.com\n")).toBe(0);
   });
 
   it("does not need the signing key", async () => {
     const { SIGNING_KEY: _unused, ...withoutKey } = COMPLETE_ENV;
 
-    expect(cli.run("destroy.mts", withoutKey, "example.com\n")).toBe(0);
+    expect(fake.current.run("destroy.mts", withoutKey, "example.com\n")).toBe(0);
   });
 });

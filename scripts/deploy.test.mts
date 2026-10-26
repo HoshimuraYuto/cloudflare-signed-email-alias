@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { APPLIED_ACCESS, COMPLETE_ENV, createFakeCli, type FakeCli } from "./fake-cli.mts";
+import { APPLIED_ACCESS, COMPLETE_ENV, useFakeCli } from "./fake-cli.mts";
 
 const PENDING_ACCESS = {
   ACCESS_TEAM_DOMAIN: "pending.invalid",
@@ -8,24 +8,16 @@ const PENDING_ACCESS = {
   ACCESS_CLIENT_ID: "pending",
 };
 
-let cli: FakeCli;
-
-beforeEach(async () => {
-  cli = await createFakeCli();
-});
-
-afterEach(async () => {
-  await cli.remove();
-});
+const fake = useFakeCli();
 
 async function steps(): Promise<string[]> {
-  return (await cli.calls()).map(
+  return (await fake.current.calls()).map(
     ({ command }) => /\b(init|output|apply|deploy)\b/.exec(command)?.[1] ?? command,
   );
 }
 
 async function deployedSecrets(): Promise<unknown[]> {
-  return (await cli.calls())
+  return (await fake.current.calls())
     .filter(({ command }) => command.includes("cf deploy"))
     .map(({ stdin }): unknown => JSON.parse(stdin));
 }
@@ -40,7 +32,7 @@ function workerSecrets(access: Record<string, string>) {
 
 describe("deploy", () => {
   it("deploys with placeholders first, then again with the Access values from apply", async () => {
-    expect(cli.run("deploy.mts", COMPLETE_ENV)).toBe(0);
+    expect(fake.current.run("deploy.mts", COMPLETE_ENV)).toBe(0);
 
     expect(await steps()).toEqual(["init", "output", "deploy", "apply", "output", "deploy"]);
     expect(await deployedSecrets()).toEqual([
@@ -50,24 +42,24 @@ describe("deploy", () => {
   });
 
   it("deploys once with the recorded Access values when nothing changed", async () => {
-    cli.run("deploy.mts", COMPLETE_ENV);
-    await cli.forgetCalls();
+    fake.current.run("deploy.mts", COMPLETE_ENV);
+    await fake.current.forgetCalls();
 
-    expect(cli.run("deploy.mts", COMPLETE_ENV)).toBe(0);
+    expect(fake.current.run("deploy.mts", COMPLETE_ENV)).toBe(0);
 
     expect(await steps()).toEqual(["init", "output", "deploy", "apply", "output"]);
     expect(await deployedSecrets()).toEqual([workerSecrets(APPLIED_ACCESS)]);
   });
 
   it("passes secrets on stdin, never as arguments", async () => {
-    cli.run("deploy.mts", COMPLETE_ENV);
+    fake.current.run("deploy.mts", COMPLETE_ENV);
 
     const secrets = [
       COMPLETE_ENV.SIGNING_KEY,
       COMPLETE_ENV.CLOUDFLARE_API_TOKEN,
       COMPLETE_ENV.STATE_PASSPHRASE,
     ];
-    for (const { command } of await cli.calls()) {
+    for (const { command } of await fake.current.calls()) {
       expect(command).not.toMatch(new RegExp(secrets.join("|")));
     }
   });
@@ -78,9 +70,9 @@ describe("deploy", () => {
     ["MANAGE_GATEWAY_PROXY", "cloudflare_zero_trust_device_settings.gateway_proxy[0]"],
     ["DMARC_POLICY", 'cloudflare_dns_record.dmarc["example.com"]'],
   ])("refuses to drop %s while the state holds what it managed", async (flag, resource) => {
-    await cli.recordState([resource]);
+    await fake.current.recordState([resource]);
 
-    const { status, stderr } = cli.runCapturing("deploy.mts", COMPLETE_ENV);
+    const { status, stderr } = fake.current.runCapturing("deploy.mts", COMPLETE_ENV);
 
     expect(status).not.toBe(0);
     expect(stderr).toContain(flag);
@@ -88,27 +80,27 @@ describe("deploy", () => {
   });
 
   it("deploys when the flag that created a shared setting is still on", async () => {
-    await cli.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
+    await fake.current.recordState(["cloudflare_zero_trust_access_application.enroll[0]"]);
     const env = {
       ...COMPLETE_ENV,
       MANAGE_DEVICE_ENROLLMENT: "true",
       ENROLL_EMAILS: "me@example.net",
     };
 
-    expect(cli.run("deploy.mts", env)).toBe(0);
+    expect(fake.current.run("deploy.mts", env)).toBe(0);
   });
 
   it("needs ENROLL_EMAILS while it manages enrollment", async () => {
     const env = { ...COMPLETE_ENV, MANAGE_DEVICE_ENROLLMENT: "true" };
 
-    expect(cli.run("deploy.mts", env)).not.toBe(0);
-    expect(await cli.calls()).toEqual([]);
+    expect(fake.current.run("deploy.mts", env)).not.toBe(0);
+    expect(await fake.current.calls()).toEqual([]);
   });
 
   it("hands tofu the state encryption and a data directory outside the repository", async () => {
-    cli.run("deploy.mts", COMPLETE_ENV);
+    fake.current.run("deploy.mts", COMPLETE_ENV);
 
-    const environments = await cli.tofuEnvironments();
+    const environments = await fake.current.tofuEnvironments();
     expect(environments.length).toBeGreaterThan(0);
     for (const { encryption, dataDir } of environments) {
       expect(encryption).toBe(true);
@@ -118,14 +110,14 @@ describe("deploy", () => {
   });
 
   it("refuses a malformed DMARC_POLICY before the Worker is deployed", async () => {
-    expect(cli.run("deploy.mts", { ...COMPLETE_ENV, DMARC_POLICY: "strict" })).not.toBe(0);
+    expect(fake.current.run("deploy.mts", { ...COMPLETE_ENV, DMARC_POLICY: "strict" })).not.toBe(0);
 
-    expect(await cli.calls()).toEqual([]);
+    expect(await fake.current.calls()).toEqual([]);
   });
 
   it("runs nothing when a variable is missing", async () => {
-    expect(cli.run("deploy.mts", { ...COMPLETE_ENV, SIGNING_KEY: "" })).not.toBe(0);
+    expect(fake.current.run("deploy.mts", { ...COMPLETE_ENV, SIGNING_KEY: "" })).not.toBe(0);
 
-    expect(await cli.calls()).toEqual([]);
+    expect(await fake.current.calls()).toEqual([]);
   });
 });

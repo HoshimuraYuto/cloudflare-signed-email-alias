@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { isRecord } from "./json.mts";
 import { run } from "./run.mts";
 import { tofuEnv, type Settings } from "./settings.mts";
 
@@ -37,6 +38,10 @@ export async function tofu(settings: Settings, args: string[]): Promise<void> {
   await run("tofu", ["-chdir=infra", ...args], { env: environment(settings) });
 }
 
+async function tofuCapturing(settings: Settings, args: string[]): Promise<string> {
+  return run("tofu", ["-chdir=infra", ...args], { env: environment(settings), capture: true });
+}
+
 export async function initTofu(settings: Settings): Promise<void> {
   await mkdir(dirname(settings.stateFile), { recursive: true });
   await tofu(settings, [
@@ -51,39 +56,27 @@ export async function stateResources(settings: Settings): Promise<string[]> {
   if (!existsSync(settings.stateFile)) {
     return [];
   }
-  const list = await run("tofu", ["-chdir=infra", "state", "list"], {
-    env: environment(settings),
-    capture: true,
-  });
+  const list = await tofuCapturing(settings, ["state", "list"]);
   return list.split("\n").filter((line) => line !== "");
 }
 
-/** The value of one output, or undefined when the state does not have it. */
-export async function tofuOutput(
-  settings: Settings,
-  name: string,
-): Promise<Record<string, unknown> | undefined>;
-export async function tofuOutput(settings: Settings, name: string, list: true): Promise<unknown[]>;
-export async function tofuOutput(
-  settings: Settings,
-  name: string,
-  list?: true,
-): Promise<Record<string, unknown> | unknown[] | undefined> {
-  const json = await run("tofu", ["-chdir=infra", "output", "-json"], {
-    env: environment(settings),
-    capture: true,
-  });
-  const outputs: unknown = JSON.parse(json);
-  if (!isRecord(outputs) || !isRecord(outputs[name])) {
-    return list ? [] : undefined;
-  }
-  const value = outputs[name]["value"];
-  if (list) {
-    return Array.isArray(value) ? value : [];
-  }
-  return isRecord(value) && !Array.isArray(value) ? value : undefined;
+async function outputValue(settings: Settings, name: string): Promise<unknown> {
+  const outputs: unknown = JSON.parse(await tofuCapturing(settings, ["output", "-json"]));
+  return isRecord(outputs) && isRecord(outputs[name]) ? outputs[name]["value"] : undefined;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+/** An object output, or undefined when the state does not have it. */
+export async function outputRecord(
+  settings: Settings,
+  name: string,
+): Promise<Record<string, unknown> | undefined> {
+  const value = await outputValue(settings, name);
+  return isRecord(value) ? value : undefined;
+}
+
+export async function warpIncludeHosts(settings: Settings): Promise<string[]> {
+  const value = await outputValue(settings, "warp_include");
+  return (Array.isArray(value) ? value : []).flatMap((entry) =>
+    isRecord(entry) && typeof entry["host"] === "string" ? [entry["host"]] : [],
+  );
 }

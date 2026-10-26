@@ -1,5 +1,6 @@
+import { DOMAIN_PATTERN } from "./domain.mts";
+
 const SERVICE_PATTERN = /^[a-z0-9-]{1,32}$/;
-const DOMAIN_PATTERN = /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/;
 const NONCE_LENGTH = 4;
 const TAG_LENGTH = 8;
 const KEY_BYTES = 32;
