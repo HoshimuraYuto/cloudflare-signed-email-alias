@@ -24,11 +24,13 @@ export interface Settings {
   forwarding: Map<string, string>;
   /** Unset leaves the default to infra/variables.tf. */
   apiSubdomain: string | undefined;
+  /** Unset leaves DMARC alone. */
+  dmarcPolicy: string | undefined;
   stateFile: string;
   manageDeviceProfile: boolean;
   manageDeviceEnrollment: boolean;
   enrollEmails: string[];
-  /** Whether destroy also removes the account-wide settings the two flags above manage. */
+  /** Whether destroy also removes the account-wide settings and the DMARC record. */
   resetSharedSettings: boolean;
 }
 
@@ -48,10 +50,12 @@ export function readSettings(
     throw new Error(`Set these environment variables: ${missing.join(", ")}`);
   }
   const apiSubdomain = env["API_SUBDOMAIN"] ?? "";
+  const dmarcPolicy = env["DMARC_POLICY"] ?? "";
   return {
     get: (name: RequiredName) => env[name] ?? "",
     forwarding: parseForwarding(env["FORWARD_TO"] ?? ""),
     apiSubdomain: apiSubdomain === "" ? undefined : apiSubdomain,
+    dmarcPolicy: dmarcPolicy === "" ? undefined : dmarcPolicy,
     stateFile:
       env["STATE_FILE"] ?? join(homedir(), ".local", "state", WORKER_NAME, "terraform.tfstate"),
     manageDeviceProfile: env["MANAGE_DEVICE_PROFILE"] === "true",
@@ -68,6 +72,7 @@ export function tofuEnv(settings: Settings): Record<string, string> {
     TF_VAR_account_id: settings.get("CLOUDFLARE_ACCOUNT_ID"),
     TF_VAR_forwarding: JSON.stringify(Object.fromEntries(settings.forwarding)),
     ...(settings.apiSubdomain === undefined ? {} : { TF_VAR_api_subdomain: settings.apiSubdomain }),
+    ...(settings.dmarcPolicy === undefined ? {} : { TF_VAR_dmarc_policy: settings.dmarcPolicy }),
     TF_VAR_manage_device_profile: String(settings.manageDeviceProfile),
     TF_VAR_manage_device_enrollment: String(settings.manageDeviceEnrollment),
     TF_VAR_enroll_emails: JSON.stringify(settings.enrollEmails),
@@ -84,6 +89,7 @@ export const SHARED_RESOURCES = {
     "cloudflare_zero_trust_access_application.enroll",
     "cloudflare_zero_trust_access_policy.enroll",
   ],
+  DMARC_POLICY: ["cloudflare_dns_record.dmarc"],
 } as const;
 
 /**
@@ -98,6 +104,7 @@ export function flagsThatWouldDelete(settings: Settings, recorded: readonly stri
       settings.manageDeviceEnrollment,
       SHARED_RESOURCES.MANAGE_DEVICE_ENROLLMENT,
     ],
+    ["DMARC_POLICY", settings.dmarcPolicy !== undefined, SHARED_RESOURCES.DMARC_POLICY],
   ] as const;
   return managed
     .filter(([, on, names]) => !on && names.some((name) => isRecorded(recorded, name)))

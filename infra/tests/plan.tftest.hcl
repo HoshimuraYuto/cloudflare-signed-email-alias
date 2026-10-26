@@ -26,6 +26,10 @@ mock_provider "cloudflare" {
     defaults = { result = [] }
   }
 
+  mock_data "cloudflare_dns_records" {
+    defaults = { result = [] }
+  }
+
   mock_data "cloudflare_email_routing_catch_all" {
     defaults = { enabled = false, actions = [{ type = "drop", value = null }] }
   }
@@ -258,4 +262,123 @@ run "rejects_an_upper_case_domain" {
   }
 
   expect_failures = [var.forwarding]
+}
+
+run "leaves_dmarc_alone_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(cloudflare_dns_record.dmarc) == 0
+    error_message = "DMARC is a domain-wide record; it is published only on request."
+  }
+}
+
+run "publishes_dmarc_on_every_domain_on_request" {
+  command = plan
+
+  variables {
+    dmarc_policy = "reject"
+    forwarding = {
+      "example.com" = "inbox@example.net"
+      "example.org" = "other@example.net"
+    }
+  }
+
+  assert {
+    condition     = toset([for record in cloudflare_dns_record.dmarc : "${record.name} ${record.content}"]) == toset(["_dmarc.example.com v=DMARC1; p=reject", "_dmarc.example.org v=DMARC1; p=reject"])
+    error_message = "Every alias domain needs the DMARC record with the chosen policy."
+  }
+  assert {
+    condition     = alltrue([for record in cloudflare_dns_record.dmarc : record.comment == "cloudflare-signed-email-alias"])
+    error_message = "The record must carry the marker later deploys recognise it by."
+  }
+}
+
+run "keeps_its_own_dmarc_record_on_later_applies" {
+  command = plan
+
+  variables {
+    dmarc_policy = "reject"
+  }
+
+  override_data {
+    target = data.cloudflare_dns_records.dmarc["example.com"]
+    values = {
+      result = [
+        {
+          comment             = "cloudflare-signed-email-alias"
+          comment_modified_on = null
+          content             = "v=DMARC1; p=reject"
+          created_on          = null
+          data                = null
+          id                  = "ours"
+          meta                = null
+          modified_on         = null
+          name                = "_dmarc.example.com"
+          priority            = null
+          private_routing     = null
+          proxiable           = null
+          proxied             = null
+          settings            = null
+          tags                = null
+          tags_modified_on    = null
+          ttl                 = null
+          type                = "TXT"
+        },
+      ]
+    }
+  }
+
+  assert {
+    condition     = length(cloudflare_dns_record.dmarc) == 1
+    error_message = "Its own record must not block a later deploy."
+  }
+}
+
+run "refuses_a_domain_with_its_own_dmarc_record" {
+  command = plan
+
+  variables {
+    dmarc_policy = "reject"
+  }
+
+  override_data {
+    target = data.cloudflare_dns_records.dmarc["example.com"]
+    values = {
+      result = [
+        {
+          comment             = ""
+          comment_modified_on = null
+          content             = "v=DMARC1; p=none"
+          created_on          = null
+          data                = null
+          id                  = "theirs"
+          meta                = null
+          modified_on         = null
+          name                = "_dmarc.example.com"
+          priority            = null
+          private_routing     = null
+          proxiable           = null
+          proxied             = null
+          settings            = null
+          tags                = null
+          tags_modified_on    = null
+          ttl                 = null
+          type                = "TXT"
+        },
+      ]
+    }
+  }
+
+  expect_failures = [cloudflare_dns_record.dmarc["example.com"]]
+}
+
+run "rejects_an_unknown_dmarc_policy" {
+  command = plan
+
+  variables {
+    dmarc_policy = "strict"
+  }
+
+  expect_failures = [var.dmarc_policy]
 }

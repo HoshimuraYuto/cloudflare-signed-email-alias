@@ -46,6 +46,17 @@ variable "manage_device_enrollment" {
   default     = false
 }
 
+variable "dmarc_policy" {
+  description = "Publish a DMARC record with this policy on every alias domain; empty leaves DMARC alone."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = contains(["", "none", "quarantine", "reject"], var.dmarc_policy)
+    error_message = "dmarc_policy must be none, quarantine or reject."
+  }
+}
+
 variable "enroll_emails" {
   description = "Addresses that may enroll devices when manage_device_enrollment is true."
   type        = list(string)

@@ -69,6 +69,7 @@ describe("destroy", () => {
       "-exclude=cloudflare_zero_trust_device_default_profile.split_tunnel",
       "-exclude=cloudflare_zero_trust_access_application.enroll",
       "-exclude=cloudflare_zero_trust_access_policy.enroll",
+      "-exclude=cloudflare_dns_record.dmarc",
     ]);
     expect(ran.some((command) => command.includes("profiles default update"))).toBe(false);
   });

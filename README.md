@@ -64,6 +64,7 @@ Store each value below in your password manager; deployment reads them from ther
    |                                         | Cloudflare One / Zero Trust | Zero Trust: Edit                                            |
    |                                         | Email & Messaging           | Email Routing Addresses: Edit                               |
    | The alias domains only (**Add policy**) | DNS & Zones                 | Zone: Read                                                  |
+   |                                         | DNS & Zones                 | DNS: Edit (only with `DMARC_POLICY`)                        |
    |                                         | DNS & Zones                 | Zone Settings: Edit                                         |
    |                                         | Email & Messaging           | Email Routing Rules: Edit                                   |
 
@@ -105,15 +106,16 @@ repeat.
 
 ### Account-wide settings
 
-Two settings exist once per Zero Trust account, so other projects may already use them.
-Deployment changes them only when you set the variable to `true`; otherwise you configure
-them yourself (see below). Once a deployment has managed one, keep its variable `true`:
-deployment refuses to run without it, because applying would delete the setting.
+These settings exist once per Zero Trust account or per domain, so other projects may
+already use them. Deployment changes them only when you set the variable; otherwise you
+configure them yourself (see below). Once a deployment has managed one, keep its variable
+set: deployment refuses to run without it, because applying would delete the setting.
 
-| Variable                   | What `true` does                                                                    |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `MANAGE_DEVICE_ENROLLMENT` | Sets who may enroll devices with the addresses in `ENROLL_EMAILS` (comma-separated) |
-| `MANAGE_DEVICE_PROFILE`    | Sets the split tunnel of the default device profile with this project's hosts       |
+| Variable                   | What it sets                                                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MANAGE_DEVICE_ENROLLMENT` | Sets who may enroll devices with the addresses in `ENROLL_EMAILS` (comma-separated)                                                                                             |
+| `MANAGE_DEVICE_PROFILE`    | Sets the split tunnel of the default device profile with this project's hosts                                                                                                   |
+| `DMARC_POLICY`             | Publishes a DMARC record with this policy (`none`, `quarantine` or `reject`) on every alias domain; stops if a domain already has one. `reject` suits domains that send no mail |
 
 ### After the first deployment
 
@@ -157,7 +159,7 @@ pnpm run destroy
 
 It uses the same environment variables except `SIGNING_KEY` and `ENROLL_EMAILS`, asks you to type every alias
 domain, then removes the Worker and everything deployment created for this project. The
-account-wide settings stay, because other projects may use them; set
+account-wide settings and the DMARC record stay, because other projects may use them; set
 `RESET_SHARED_SETTINGS=true` to remove them too and restore the default split tunnel. It
 prints the few things you remove yourself.
 

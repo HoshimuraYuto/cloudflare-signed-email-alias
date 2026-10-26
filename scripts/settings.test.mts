@@ -42,6 +42,13 @@ describe("readSettings", () => {
     });
   });
 
+  it("passes DMARC_POLICY only when set", () => {
+    expect(tofuEnv(readSettings(complete))).not.toHaveProperty("TF_VAR_dmarc_policy");
+    expect(tofuEnv(readSettings({ ...complete, DMARC_POLICY: "reject" }))).toMatchObject({
+      TF_VAR_dmarc_policy: "reject",
+    });
+  });
+
   it("refuses a malformed FORWARD_TO before anything runs", () => {
     expect(() => readSettings({ ...complete, FORWARD_TO: "inbox@example.net" })).toThrow(
       /domain=inbox/,
