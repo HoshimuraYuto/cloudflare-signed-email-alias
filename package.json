@@ -18,7 +18,7 @@
     "tldts-icann": "7.4.19"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.3",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.5",
     "@cloudflare/vitest-plugin": "1.4.7",
     "@commitlint/cli": "21.2.4",
     "@commitlint/config-conventional": "21.2.4",
