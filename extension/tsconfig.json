@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "dom", "dom.iterable"]
+  },
+  "include": ["**/*", "../src/domain.mts"],
+  // The root excludes extension/, and extends would carry that over.
+  "exclude": []
+}

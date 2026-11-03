@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cloudflare Signed Email Alias</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Cloudflare Signed Email Alias</h1>
+      <p id="status" role="status"></p>
+      <section id="saved" hidden>
+        <h2>Service token</h2>
+        <p id="saved-token"></p>
+        <button id="change-token" type="button">Change token</button>
+        <h2>API URLs</h2>
+        <ul id="origins"></ul>
+        <div class="actions">
+          <button id="add-origin" type="button">Add API URL</button>
+          <button id="remove" type="button">Remove all</button>
+        </div>
+      </section>
+      <form id="settings" autocomplete="off" hidden>
+        <div id="url-group" class="field">
+          <label for="api-url">API URL</label>
+          <input
+            id="api-url"
+            name="api-url"
+            type="url"
+            placeholder="https://email-alias-api.example.com"
+            spellcheck="false"
+          />
+        </div>
+        <div id="token-group" class="field">
+          <label for="service-token">Service token</label>
+          <input
+            id="service-token"
+            name="service-token"
+            type="password"
+            placeholder="Output of pnpm run service-token"
+            spellcheck="false"
+          />
+        </div>
+        <p id="error" role="alert"></p>
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button id="cancel" type="button" hidden>Cancel</button>
+        </div>
+      </form>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
