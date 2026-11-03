@@ -5,9 +5,10 @@ English | [日本語](README.ja.md)
 Not an official Cloudflare project.
 
 A Cloudflare Worker that gives every site its own email address and forwards mail sent to
-those addresses to your inbox. Your password manager creates the addresses through an
-addy.io-compatible API. The Worker stores nothing: each address carries a signature, and
-mail is accepted only when the signature matches.
+those addresses to your inbox. Your password manager, or the Chrome extension in this
+repository, creates the addresses through an addy.io-compatible API. The Worker stores
+nothing: each address carries a signature, and mail is accepted only when the signature
+matches.
 
 ## How it works
 
@@ -30,9 +31,11 @@ mail is accepted only when the signature matches.
   - Everything else stays free: websites, other DNS records, and sending mail through
     another service once its SPF entry is merged into the record Email Routing adds.
 - A Cloudflare account with Zero Trust enabled (the free plan is enough).
-- A password manager with an addy.io forwarder that accepts a custom server URL, such as
-  Bitwarden. Bitwarden's web vault cannot use it: browsers send a preflight request that
-  Access rejects.
+- A way to create addresses, either or both:
+  - A password manager with an addy.io forwarder that accepts a custom server URL, such as
+    Bitwarden. Bitwarden's web vault cannot use it: browsers send a preflight request that
+    Access rejects.
+  - Chrome, with the [extension](#chrome-extension) in this repository.
 - macOS or Linux to deploy from, with `openssl`.
 - [mise](https://mise.jdx.dev/), which installs the Node.js, pnpm and OpenTofu versions
   this repository pins.
@@ -212,6 +215,50 @@ If an alias receives spam, add it to `REVOKED_ALIASES` and run `pnpm run deploy`
 Mail to it is then rejected like mail to an address that never existed. Remove it from the
 list and deploy again to receive its mail again.
 
+## Chrome extension
+
+The extension puts a button in email fields. Clicking it creates an address for the site and
+fills it in, without a password manager. It uses the same API and service token, so it
+works only from a device enrolled in your Zero Trust organization.
+
+1. Build it:
+
+   ```sh
+   pnpm run extension:build
+   ```
+
+2. In Chrome, open `chrome://extensions`, turn on **Developer mode**, select
+   **Load unpacked** and choose `extension/.output/chrome-mv3`.
+3. Open the extension's **Details** → **Extension options** and enter:
+
+   | Field         | Value                                                                                 |
+   | ------------- | ------------------------------------------------------------------------------------- |
+   | API URL       | The API hostname of one alias domain, such as `https://email-alias-api.<your domain>` |
+   | Service token | The output of `pnpm run service-token`                                                |
+
+4. Select **Save** and allow access to the API hostname when Chrome asks.
+5. For each other alias domain, select **Add API URL**, enter its API hostname and save. One
+   deployment serves every domain with the same service token, so it is entered once.
+
+With one domain, the button creates the address at once. With two or more, it lists the
+domains first; choose one with the mouse, or with the arrow keys and Enter. Escape closes
+the list.
+
+To update the extension, build it again and select the reload button on its card in
+`chrome://extensions`.
+
+- The service token is stored in the extension's local storage, which web pages and the
+  extension's own code inside them cannot read. Chrome keeps it unencrypted in your
+  browser profile on disk. It is never shown again after saving.
+- The extension may contact only the API hostnames you allowed, and sends the token only
+  to the API hostname of the domain you chose. **Remove** next to an API URL withdraws access to that
+  hostname; **Remove all** deletes every setting and all of that access.
+- The site part of each address comes from the frame the field is in, as Chrome reports it;
+  a page cannot choose it. A sign-up form embedded from another service gets that
+  service's name.
+- The button and the domain list work only while fully visible. A page that hides or covers
+  them cannot turn your click into an address.
+
 ## Remove
 
 ```sh
@@ -251,6 +298,11 @@ access or credentials. `pnpm fix` applies the formatters and lint fixes.
 
 Worker tests live in `test/` and script tests next to the scripts in `scripts/`: the two
 run in different runtimes, each with its own `tsconfig.json` and `vitest.config.mts`.
+The Chrome extension lives in `extension/` with its unit tests beside each module; `pnpm
+check` runs them too.
+
+`pnpm run extension:e2e` loads a test build of the extension into Playwright's Chromium
+against a faked API. Run `pnpm exec playwright install chromium` once before the first run.
 
 ## License
 
