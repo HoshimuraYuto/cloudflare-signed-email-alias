@@ -25,6 +25,8 @@ jobs:
           tofu_wrapper: false
       - run: tofu -chdir=infra init -input=false -backend=false
       - run: pnpm check
+      - run: pnpm exec playwright install --with-deps --no-shell chromium
+      - run: pnpm run extension:e2e
 
   release:
     needs: check

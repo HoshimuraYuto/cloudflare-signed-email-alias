@@ -2,3 +2,5 @@ node_modules/
 .worktrees/
 .cloudflare/
 infra/.terraform/
+extension/.output/
+extension/.wxt/
