@@ -16,7 +16,7 @@
     "extension:e2e": "wxt build extension --mode e2e && playwright test -c extension/playwright.config.mts"
   },
   "dependencies": {
-    "jose": "6.2.14",
+    "jose": "6.2.16",
     "tldts-icann": "7.4.19"
   },
   "devDependencies": {
