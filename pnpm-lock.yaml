@@ -182,7 +182,7 @@ importers:
         version: 2.0.0-beta.v.5(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))(workerd@1.20261023.1)
       '@cloudflare/vitest-plugin':
         specifier: 1.4.11
-        version: 1.4.11(@types/node@26.6.6)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))
+        version: 1.4.11(@types/node@26.6.6)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))
       '@commitlint/cli':
         specifier: 21.2.4
         version: 21.2.4(conventional-commits-parser@7.1.3)(typescript@7.0.2)
@@ -194,7 +194,7 @@ importers:
         version: 21.2.3
       '@msw/cloudflare':
         specifier: 0.2.0
-        version: 0.2.0(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(supports-color@10.2.2)
+        version: 0.2.0(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(supports-color@10.2.2)
       '@playwright/test':
         specifier: 1.65.0
         version: 1.65.0
@@ -217,8 +217,8 @@ importers:
         specifier: 2.2.1
         version: 2.2.1
       msw:
-        specifier: 3.0.3
-        version: 3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+        specifier: 3.0.6
+        version: 3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
       oxfmt:
         specifier: 0.74.0
         version: 0.74.0
@@ -242,7 +242,7 @@ importers:
         version: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)
       vitest:
         specifier: 5.1.0
-        version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+        version: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
       wxt:
         specifier: 0.21.5
         version: 0.21.5(esbuild@0.28.2)(rolldown@1.2.14)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
@@ -854,6 +854,10 @@ packages:
 
   '@msw/url@0.1.2':
     resolution: {integrity: sha512-DdeBLQxQ+ZrtmwEmaj7GQ7lbzPCgbbbyAqOz/I4ulo68hwBpfdNvQJ5bmihJUkAAKOeCmqCIG3OFZGosqFN4mA==}
+
+  '@mswjs/interceptors@0.45.12':
+    resolution: {integrity: sha512-LLttQ/SSmseGFD/sNiHv9q34hd4gmPLN9uQdIIsU/V/o2AgTJm3dWoKHA4KTj0BzAans6CoEmpHYmp80yp69VA==}
+    engines: {node: '>=22'}
 
   '@mswjs/interceptors@0.45.9':
     resolution: {integrity: sha512-NmEzpWbbiWpudgqKVZtGdSAvQGIYyj7Rf8ea+1hJEo+Dn0YvPHtiz577US7kGg0sCaZtPelrdqV4SfwwGJq1cA==}
@@ -1488,9 +1492,6 @@ packages:
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
-
-  '@types/node@26.6.5':
-    resolution: {integrity: sha512-uMzsv9stDdofIZBx4UGh4Z9ZgXnGC9seRDscilBcTHAeOFk67MZg/k9bWVfO+bk4qZmG+l52hRnLwUiH2LnJTg==}
 
   '@types/node@26.6.6':
     resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
@@ -2654,8 +2655,8 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  msw@3.0.3:
-    resolution: {integrity: sha512-hsXUCt2gK12q1IUBY9VmMun+yC60eEpVzegAFN5aGZbXhrGqtgPARVWn2ew4mezYvk1G8yhFha9myGSyRyRGWg==}
+  msw@3.0.6:
+    resolution: {integrity: sha512-0Axg6UFY1TulPoNYIEA2sk5h30CYa+02vSxtmcBC8WefnmewzXArKhhFyIFxIH3CgRltDLcgYHQ3k9WWWvFd0A==}
     engines: {node: '>=22.12.0'}
     hasBin: true
     peerDependencies:
@@ -3800,12 +3801,12 @@ snapshots:
       - utf-8-validate
       - workerd
 
-  '@cloudflare/vitest-plugin@1.4.11(@types/node@26.6.6)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))':
+  '@cloudflare/vitest-plugin@1.4.11(@types/node@26.6.6)(vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))':
     dependencies:
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.2
       miniflare: 5.20261023.3-beta(@types/node@26.6.6)
-      vitest: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+      vitest: 5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
       wrangler: 4.156.0(@types/node@26.6.6)
       zod: 4.6.6
     transitivePeerDependencies:
@@ -4193,14 +4194,25 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@msw/cloudflare@0.2.0(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(supports-color@10.2.2)':
+  '@msw/cloudflare@0.2.0(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(supports-color@10.2.2)':
     dependencies:
       '@mswjs/interceptors': 0.45.9(supports-color@10.2.2)
-      msw: 3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+      msw: 3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
     transitivePeerDependencies:
       - supports-color
 
   '@msw/url@0.1.2': {}
+
+  '@mswjs/interceptors@0.45.12(supports-color@10.2.2)':
+    dependencies:
+      '@open-draft/until': 3.0.1
+      '@types/debug': 4.1.13
+      debug: 4.4.3(supports-color@10.2.2)
+      is-node-process: 1.2.0
+      outvariant: 1.4.3
+      rettime: 0.11.12
+    transitivePeerDependencies:
+      - supports-color
 
   '@mswjs/interceptors@0.45.9(supports-color@10.2.2)':
     dependencies:
@@ -4755,10 +4767,6 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
-  '@types/node@26.6.5':
-    dependencies:
-      undici-types: 8.9.0
-
   '@types/node@26.6.6':
     dependencies:
       undici-types: 8.9.0
@@ -4767,7 +4775,7 @@ snapshots:
 
   '@types/set-cookie-parser@2.4.10':
     dependencies:
-      '@types/node': 26.6.5
+      '@types/node': 26.6.6
 
   '@types/whatwg-mimetype@3.0.2': {}
 
@@ -4835,14 +4843,14 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@vitest/mocker@5.1.0(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))':
+  '@vitest/mocker@5.1.0(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.0
       estree-walker: 3.0.3
       magic-string: 1.4.3
     optionalDependencies:
-      msw: 3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+      msw: 3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
       vite: 8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)
 
   '@vitest/spy@5.1.0': {}
@@ -5803,11 +5811,11 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)):
+  msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)):
     dependencies:
       '@inquirer/confirm': 6.3.4(@types/node@26.6.6)
       '@msw/url': 0.1.2
-      '@mswjs/interceptors': 0.45.9(supports-color@10.2.2)
+      '@mswjs/interceptors': 0.45.12(supports-color@10.2.2)
       cookie: 2.0.1
       headers-polyfill: 5.0.1
       is-node-process: 1.2.0
@@ -6628,10 +6636,10 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
 
-  vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)):
+  vitest@5.1.0(@types/node@26.6.6)(happy-dom@21.0.4)(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.1.0(msw@3.0.3(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
+      '@vitest/mocker': 5.1.0(msw@3.0.6(@types/node@26.6.6)(supports-color@10.2.2)(typescript@7.0.2)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)))(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
